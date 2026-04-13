@@ -1,0 +1,1016 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0f1117" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>MasterApp</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #16181f;
+      --surface2: #1e2028;
+      --border: #2a2d38;
+      --accent: #6ee7b7;
+      --accent2: #38bdf8;
+      --danger: #f87171;
+      --warn: #fbbf24;
+      --text: #e8eaf0;
+      --text2: #8b8fa8;
+      --radius: 12px;
+      --font-display: 'Syne', sans-serif;
+      --font-mono: 'Space Mono', monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-display);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── NOISE TEXTURE OVERLAY ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.4;
+    }
+
+    /* ── HEADER ── */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(15,17,23,0.85);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .logo {
+      font-size: 1.25rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .logo span {
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      font-weight: 400;
+      color: var(--text2);
+      -webkit-text-fill-color: var(--text2);
+      display: block;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-top: -2px;
+    }
+
+    /* ── TABS ── */
+    .tabs {
+      display: flex;
+      gap: 4px;
+      padding: 16px 20px 0;
+      position: relative;
+      z-index: 1;
+    }
+
+    .tab {
+      flex: 1;
+      padding: 10px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-bottom: none;
+      border-radius: var(--radius) var(--radius) 0 0;
+      color: var(--text2);
+      font-family: var(--font-display);
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+      text-transform: uppercase;
+    }
+
+    .tab.active {
+      background: var(--surface2);
+      color: var(--accent);
+      border-color: var(--accent);
+      border-bottom-color: var(--surface2);
+    }
+
+    /* ── MAIN CONTENT ── */
+    .content {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 0 0 var(--radius) var(--radius);
+      margin: 0 20px;
+      padding: 20px;
+      position: relative;
+      z-index: 1;
+      min-height: 70vh;
+    }
+
+    /* ── PANELS ── */
+    .panel { display: none; }
+    .panel.active { display: block; animation: fadeIn 0.25s ease; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── SEARCH BAR ── */
+    .search-wrap {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    input[type="text"], input[type="number"], select, textarea {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      padding: 10px 14px;
+      outline: none;
+      transition: border-color 0.2s;
+      width: 100%;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--accent);
+    }
+
+    input::placeholder { color: var(--text2); }
+
+    /* ── BUTTONS ── */
+    .btn {
+      padding: 10px 18px;
+      border-radius: 8px;
+      border: none;
+      font-family: var(--font-display);
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+      text-transform: uppercase;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #0f1117;
+    }
+    .btn-primary:hover { filter: brightness(1.1); transform: translateY(-1px); }
+
+    .btn-secondary {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text2);
+    }
+    .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+
+    .btn-danger {
+      background: transparent;
+      border: 1px solid var(--danger);
+      color: var(--danger);
+    }
+    .btn-danger:hover { background: var(--danger); color: #fff; }
+
+    .btn-save {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #0f1117;
+      width: 100%;
+      padding: 12px;
+      font-size: 0.85rem;
+      border-radius: 10px;
+    }
+
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; }
+
+    /* ── SEARCH RESULTS ── */
+    .results-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .result-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+      cursor: pointer;
+      transition: all 0.15s;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .result-item:hover {
+      border-color: var(--accent);
+      transform: translateX(3px);
+    }
+
+    .result-name {
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+
+    .result-meta {
+      font-size: 0.75rem;
+      color: var(--text2);
+      font-family: var(--font-mono);
+      margin-top: 2px;
+    }
+
+    .badge {
+      font-size: 0.65rem;
+      padding: 3px 8px;
+      border-radius: 20px;
+      font-family: var(--font-mono);
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+
+    .badge-green { background: rgba(110,231,183,0.15); color: var(--accent); border: 1px solid rgba(110,231,183,0.3); }
+    .badge-red { background: rgba(248,113,113,0.15); color: var(--danger); border: 1px solid rgba(248,113,113,0.3); }
+    .badge-blue { background: rgba(56,189,248,0.15); color: var(--accent2); border: 1px solid rgba(56,189,248,0.3); }
+    .badge-gray { background: rgba(139,143,168,0.15); color: var(--text2); border: 1px solid rgba(139,143,168,0.3); }
+
+    /* ── STUDENT CARD ── */
+    .student-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 12px;
+    }
+
+    .student-name {
+      font-size: 1.1rem;
+      font-weight: 800;
+      line-height: 1.2;
+    }
+
+    .student-id {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--text2);
+      margin-top: 2px;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .info-item {
+      background: var(--surface2);
+      border-radius: 8px;
+      padding: 10px 12px;
+    }
+
+    .info-label {
+      font-size: 0.65rem;
+      color: var(--text2);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-family: var(--font-mono);
+      margin-bottom: 4px;
+    }
+
+    .info-value {
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+
+    .info-value.editable-field {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* ── SECTION TITLE ── */
+    .section-title {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--text2);
+      font-family: var(--font-mono);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .section-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ── ATTENDANCE GRID ── */
+    .attendance-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      max-height: 280px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    .attendance-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      align-items: center;
+      background: var(--surface2);
+      border-radius: 8px;
+      padding: 8px 10px;
+    }
+
+    .attendance-date {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--text2);
+    }
+
+    .attendance-select {
+      width: 130px;
+      padding: 6px 10px;
+      font-size: 0.75rem;
+    }
+
+    .attendance-custom {
+      width: 100%;
+      padding: 6px 10px;
+      font-size: 0.75rem;
+      margin-top: 6px;
+      display: none;
+    }
+
+    /* ── SUMMARY TABLE ── */
+    .filter-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr auto;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .summary-stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .stat-box {
+      background: var(--surface);
+      border-radius: 8px;
+      padding: 12px;
+      text-align: center;
+      border: 1px solid var(--border);
+    }
+
+    .stat-num {
+      font-size: 1.5rem;
+      font-weight: 800;
+      font-family: var(--font-mono);
+    }
+
+    .stat-label {
+      font-size: 0.65rem;
+      color: var(--text2);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-top: 2px;
+    }
+
+    .summary-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      max-height: 350px;
+      overflow-y: auto;
+    }
+
+    .summary-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--surface);
+      border-radius: 8px;
+      padding: 10px 14px;
+      border: 1px solid var(--border);
+    }
+
+    .summary-item.empty {
+      border-color: rgba(248,113,113,0.2);
+      background: rgba(248,113,113,0.04);
+    }
+
+    .summary-item.filled {
+      border-color: rgba(110,231,183,0.2);
+      background: rgba(110,231,183,0.04);
+    }
+
+    /* ── TOAST ── */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      z-index: 999;
+      transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+      white-space: nowrap;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+
+    .toast.show { transform: translateX(-50%) translateY(0); }
+    .toast.success { border-color: var(--accent); color: var(--accent); }
+    .toast.error { border-color: var(--danger); color: var(--danger); }
+
+    /* ── LOADER ── */
+    .loader {
+      display: inline-block;
+      width: 16px; height: 16px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text2);
+      font-size: 0.85rem;
+    }
+
+    .empty-state .icon { font-size: 2rem; margin-bottom: 8px; }
+
+    /* ── DIVIDER ── */
+    hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+
+    /* ── BACK BTN ── */
+    .back-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: none;
+      border: none;
+      color: var(--text2);
+      font-family: var(--font-display);
+      font-size: 0.8rem;
+      cursor: pointer;
+      padding: 0;
+      margin-bottom: 14px;
+      transition: color 0.2s;
+    }
+    .back-btn:hover { color: var(--accent); }
+
+    /* ── SCROLLBAR ── */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    /* ── PWA INSTALL ── */
+    .install-banner {
+      display: none;
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--surface2);
+      border: 1px solid var(--accent);
+      border-radius: 12px;
+      padding: 14px 18px;
+      z-index: 200;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      display: none;
+      align-items: center;
+      gap: 12px;
+      font-size: 0.85rem;
+    }
+
+    .online-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 6px var(--accent);
+      display: inline-block;
+      margin-right: 6px;
+    }
+
+    .online-dot.offline { background: var(--danger); box-shadow: 0 0 6px var(--danger); }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    MasterApp
+    <span>SMK Diponegoro Tumpang</span>
+  </div>
+  <div style="font-size:0.75rem; color:var(--text2); font-family:var(--font-mono);">
+    <span class="online-dot" id="onlineDot"></span>
+    <span id="onlineLabel">Online</span>
+  </div>
+</header>
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('search')">🔍 Siswa</button>
+  <button class="tab" onclick="switchTab('summary')">📊 Absensi</button>
+</div>
+
+<div class="content">
+
+  <!-- ══ PANEL: SEARCH ══ -->
+  <div class="panel active" id="panel-search">
+
+    <!-- Search View -->
+    <div id="view-search">
+      <div class="search-wrap">
+        <input type="text" id="searchInput" placeholder="Cari nama, ID, kelas, ekstra..." />
+        <button class="btn btn-primary" onclick="doSearch()">Cari</button>
+      </div>
+      <div id="searchResults">
+        <div class="empty-state">
+          <div class="icon">🔍</div>
+          Ketik nama atau ID siswa untuk mulai
+        </div>
+      </div>
+    </div>
+
+    <!-- Student Detail View -->
+    <div id="view-detail" style="display:none;">
+      <button class="back-btn" onclick="backToSearch()">← Kembali ke pencarian</button>
+
+      <div class="student-card" id="studentCard">
+        <!-- filled by JS -->
+      </div>
+
+      <div class="section-title">Edit Data</div>
+
+      <!-- Ekstra -->
+      <div style="margin-bottom:12px;">
+        <div class="info-label" style="margin-bottom:6px;">Ekstra</div>
+        <input type="text" id="editEkstra" placeholder="Nama ekstra..." />
+      </div>
+
+      <!-- Denda Dibayar -->
+      <div style="margin-bottom:16px;">
+        <div class="info-label" style="margin-bottom:6px;">Denda Dibayar (Rp)</div>
+        <input type="number" id="editDenda" placeholder="0" min="0" />
+      </div>
+
+      <hr />
+
+      <div class="section-title">Absensi Harian</div>
+      <div class="attendance-grid" id="attendanceGrid">
+        <!-- filled by JS -->
+      </div>
+
+      <hr />
+
+      <button class="btn btn-save" onclick="saveStudent()" id="saveBtn">
+        💾 Simpan Perubahan
+      </button>
+    </div>
+
+  </div>
+
+  <!-- ══ PANEL: SUMMARY ══ -->
+  <div class="panel" id="panel-summary">
+
+    <div class="filter-row">
+      <select id="filterEkstra">
+        <option value="all">Semua Ekstra</option>
+      </select>
+      <select id="filterDate">
+        <option value="">Pilih Tanggal...</option>
+      </select>
+      <button class="btn btn-primary" onclick="loadSummary()">Tampil</button>
+    </div>
+
+    <div id="summaryContent">
+      <div class="empty-state">
+        <div class="icon">📊</div>
+        Pilih ekstra dan tanggal untuk melihat ringkasan
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+  const GAS_URL = "https://script.google.com/macros/s/AKfycbzwgwoKQNXSWn7BrwlzZe1XmVlY0JnGgA6CKY7cjVUXols6Oo_7IyBIiuVDmoQh__wO/exec";
+
+  let currentStudent = null;
+  let searchTimeout = null;
+
+  // ── ONLINE STATUS ──────────────────────────────────────────────────────────
+  function updateOnline() {
+    const dot = document.getElementById('onlineDot');
+    const label = document.getElementById('onlineLabel');
+    if (navigator.onLine) {
+      dot.className = 'online-dot';
+      label.textContent = 'Online';
+    } else {
+      dot.className = 'online-dot offline';
+      label.textContent = 'Offline';
+    }
+  }
+  window.addEventListener('online', updateOnline);
+  window.addEventListener('offline', updateOnline);
+  updateOnline();
+
+  // ── TABS ──────────────────────────────────────────────────────────────────
+  function switchTab(tab) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    event.target.classList.add('active');
+    document.getElementById('panel-' + tab).classList.add('active');
+
+    if (tab === 'summary') initSummaryFilters();
+  }
+
+  // ── TOAST ─────────────────────────────────────────────────────────────────
+  function showToast(msg, type = 'success') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast ' + type + ' show';
+    setTimeout(() => t.classList.remove('show'), 3000);
+  }
+
+  // ── API CALL (no-cors via jsonp trick using fetch no-cors for GAS) ─────────
+  async function gasGet(params) {
+    const url = GAS_URL + '?' + new URLSearchParams(params);
+    const res = await fetch(url, { redirect: 'follow' });
+    return res.json();
+  }
+
+  async function gasPost(body) {
+    const res = await fetch(GAS_URL, {
+      method: 'POST',
+      redirect: 'follow',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(body)
+    });
+    return res.json();
+  }
+
+  // ── SEARCH ────────────────────────────────────────────────────────────────
+  document.getElementById('searchInput').addEventListener('input', function () {
+    clearTimeout(searchTimeout);
+    const q = this.value.trim();
+    if (q.length < 2) {
+      document.getElementById('searchResults').innerHTML = `
+        <div class="empty-state"><div class="icon">🔍</div>Ketik minimal 2 karakter</div>`;
+      return;
+    }
+    searchTimeout = setTimeout(() => doSearch(), 400);
+  });
+
+  document.getElementById('searchInput').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') doSearch();
+  });
+
+  async function doSearch() {
+    const q = document.getElementById('searchInput').value.trim();
+    if (!q) return;
+
+    const el = document.getElementById('searchResults');
+    el.innerHTML = `<div class="empty-state"><span class="loader"></span>Mencari...</div>`;
+
+    try {
+      const data = await gasGet({ action: 'masterSearch', query: q });
+
+      if (!data.results || data.results.length === 0) {
+        el.innerHTML = `<div class="empty-state"><div class="icon">😕</div>Siswa tidak ditemukan</div>`;
+        return;
+      }
+
+      el.innerHTML = `<div class="results-list">${data.results.map(s => `
+        <div class="result-item" onclick="openStudent('${s.id}')">
+          <div>
+            <div class="result-name">${s.nama}</div>
+            <div class="result-meta">${s.id} · ${s.kelas} · ${s.ekstra}</div>
+          </div>
+          <div style="display:flex;gap:6px;align-items:center;">
+            ${s.sisaDenda > 0 ? `<span class="badge badge-red">Rp ${s.sisaDenda.toLocaleString('id')}</span>` : ''}
+            <span class="badge badge-blue">→</span>
+          </div>
+        </div>`).join('')}</div>`;
+
+    } catch (e) {
+      el.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div>Gagal mengambil data</div>`;
+    }
+  }
+
+  // ── OPEN STUDENT ──────────────────────────────────────────────────────────
+  async function openStudent(id) {
+    document.getElementById('view-search').style.display = 'none';
+    document.getElementById('view-detail').style.display = 'block';
+    document.getElementById('studentCard').innerHTML = `<div class="empty-state"><span class="loader"></span>Memuat data...</div>`;
+    document.getElementById('attendanceGrid').innerHTML = '';
+
+    try {
+      const data = await gasGet({ action: 'masterStudent', id });
+      if (data.status !== 'ok') throw new Error(data.message);
+      currentStudent = data.student;
+      renderStudentDetail(data.student);
+    } catch (e) {
+      showToast('Gagal memuat data siswa', 'error');
+    }
+  }
+
+  function renderStudentDetail(s) {
+    // Info card
+    document.getElementById('studentCard').innerHTML = `
+      <div class="card-header">
+        <div>
+          <div class="student-name">${s.nama}</div>
+          <div class="student-id">${s.id}</div>
+        </div>
+        <span class="badge ${s.status === 'Aktif' ? 'badge-green' : 'badge-gray'}">${s.status || '-'}</span>
+      </div>
+      <div class="info-grid">
+        <div class="info-item">
+          <div class="info-label">Kelas</div>
+          <div class="info-value">${s.kelas || '-'}</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Ekstra</div>
+          <div class="info-value">${s.ekstra || '-'}</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Total Denda</div>
+          <div class="info-value">Rp ${(s.denda||0).toLocaleString('id')}</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Sisa Denda</div>
+          <div class="info-value" style="color:${s.sisaDenda > 0 ? 'var(--danger)' : 'var(--accent)'}">
+            Rp ${(s.sisaDenda||0).toLocaleString('id')}
+          </div>
+        </div>
+      </div>
+      ${s.syaratKhusus ? `<div style="font-size:0.75rem;color:var(--warn);font-family:var(--font-mono);">⚠️ ${s.syaratKhusus}</div>` : ''}
+    `;
+
+    // Pre-fill edit fields
+    document.getElementById('editEkstra').value = s.ekstra || '';
+    document.getElementById('editDenda').value = s.dendaDibayar || 0;
+
+    // Attendance
+    const grid = document.getElementById('attendanceGrid');
+    if (!s.attendance || s.attendance.length === 0) {
+      grid.innerHTML = `<div class="empty-state" style="padding:16px;">Tidak ada data absensi</div>`;
+      return;
+    }
+
+    grid.innerHTML = s.attendance.map(a => `
+      <div class="attendance-row">
+        <div class="attendance-date">📅 ${a.tanggal}</div>
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <select class="attendance-select" data-col="${a.colIndex}" onchange="handleAttendanceChange(this)">
+            <option value="">— Kosong —</option>
+            <option value="HADIR" ${a.status === 'HADIR' ? 'selected' : ''}>HADIR</option>
+            <option value="ALPHA" ${a.status === 'ALPHA' ? 'selected' : ''}>ALPHA</option>
+            <option value="IZIN"  ${a.status === 'IZIN'  ? 'selected' : ''}>IZIN</option>
+            <option value="SAKIT" ${a.status === 'SAKIT' ? 'selected' : ''}>SAKIT</option>
+            <option value="LAINNYA" ${(a.status && !['HADIR','ALPHA','IZIN','SAKIT',''].includes(a.status)) ? 'selected' : ''}>LAINNYA...</option>
+          </select>
+          <input type="text"
+            class="attendance-custom"
+            data-col="${a.colIndex}"
+            placeholder="Ketik nilai..."
+            value="${(a.status && !['HADIR','ALPHA','IZIN','SAKIT',''].includes(a.status)) ? a.status : ''}"
+            style="display:${(a.status && !['HADIR','ALPHA','IZIN','SAKIT',''].includes(a.status)) ? 'block' : 'none'}"
+          />
+        </div>
+      </div>`).join('');
+  }
+
+  function handleAttendanceChange(sel) {
+    const customInput = sel.parentElement.querySelector('.attendance-custom');
+    if (sel.value === 'LAINNYA') {
+      customInput.style.display = 'block';
+      customInput.focus();
+    } else {
+      customInput.style.display = 'none';
+    }
+  }
+
+  // ── SAVE STUDENT ──────────────────────────────────────────────────────────
+  async function saveStudent() {
+    if (!currentStudent) return;
+
+    const btn = document.getElementById('saveBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="loader"></span>Menyimpan...';
+
+    // Collect attendance
+    const attendance = [];
+    document.querySelectorAll('.attendance-select').forEach(sel => {
+      const col = parseInt(sel.dataset.col);
+      let val = sel.value;
+      if (val === 'LAINNYA') {
+        const custom = sel.parentElement.querySelector('.attendance-custom');
+        val = custom.value.trim();
+      }
+      attendance.push({ colIndex: col, status: val });
+    });
+
+    const payload = {
+      action: 'masterUpdate',
+      studentId: currentStudent.id,
+      ekstra: document.getElementById('editEkstra').value.trim(),
+      dendaDibayar: parseFloat(document.getElementById('editDenda').value) || 0,
+      attendance
+    };
+
+    try {
+      const res = await gasPost(payload);
+      if (res.status === 'ok') {
+        currentStudent = res.student;
+        renderStudentDetail(res.student);
+        showToast('✅ Data berhasil disimpan!', 'success');
+      } else {
+        showToast('❌ ' + (res.message || 'Gagal menyimpan'), 'error');
+      }
+    } catch (e) {
+      showToast('❌ Koneksi gagal', 'error');
+    }
+
+    btn.disabled = false;
+    btn.innerHTML = '💾 Simpan Perubahan';
+  }
+
+  function backToSearch() {
+    document.getElementById('view-detail').style.display = 'none';
+    document.getElementById('view-search').style.display = 'block';
+    currentStudent = null;
+  }
+
+  // ── SUMMARY ───────────────────────────────────────────────────────────────
+  async function initSummaryFilters() {
+    const ekstraEl = document.getElementById('filterEkstra');
+    const dateEl = document.getElementById('filterDate');
+
+    if (ekstraEl.options.length <= 1) {
+      try {
+        const [ekstraData, dateData] = await Promise.all([
+          gasGet({ action: 'masterEkstra' }),
+          gasGet({ action: 'masterDates' })
+        ]);
+
+        if (ekstraData.ekstraList) {
+          ekstraData.ekstraList.forEach(e => {
+            const opt = document.createElement('option');
+            opt.value = e; opt.textContent = e;
+            ekstraEl.appendChild(opt);
+          });
+        }
+
+        if (dateData.dates) {
+          dateData.dates.forEach(d => {
+            const opt = document.createElement('option');
+            opt.value = d; opt.textContent = d;
+            dateEl.appendChild(opt);
+          });
+          // default to latest date
+          if (dateData.dates.length > 0) {
+            dateEl.value = dateData.dates[dateData.dates.length - 1];
+          }
+        }
+      } catch (e) {
+        showToast('Gagal memuat filter', 'error');
+      }
+    }
+  }
+
+  async function loadSummary() {
+    const ekstra = document.getElementById('filterEkstra').value;
+    const tanggal = document.getElementById('filterDate').value;
+
+    if (!tanggal) { showToast('Pilih tanggal dulu', 'error'); return; }
+
+    const el = document.getElementById('summaryContent');
+    el.innerHTML = `<div class="empty-state"><span class="loader"></span>Memuat ringkasan...</div>`;
+
+    try {
+      const data = await gasGet({ action: 'masterSummary', ekstra, tanggal });
+      if (data.status !== 'ok') throw new Error(data.message);
+
+      const filled = data.summary.filter(s => s.status !== '');
+      const empty = data.summary.filter(s => s.status === '');
+      const total = data.summary.length;
+
+      el.innerHTML = `
+        <div class="summary-stats">
+          <div class="stat-box">
+            <div class="stat-num" style="color:var(--text)">${total}</div>
+            <div class="stat-label">Total</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-num" style="color:var(--accent)">${filled.length}</div>
+            <div class="stat-label">Terisi</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-num" style="color:var(--danger)">${empty.length}</div>
+            <div class="stat-label">Kosong</div>
+          </div>
+        </div>
+
+        ${empty.length > 0 ? `
+          <div class="section-title">Belum Terisi (${empty.length})</div>
+          <div class="summary-list" style="margin-bottom:12px;">
+            ${empty.map(s => `
+              <div class="summary-item empty">
+                <div>
+                  <div style="font-size:0.85rem;font-weight:600;">${s.nama}</div>
+                  <div style="font-size:0.72rem;color:var(--text2);font-family:var(--font-mono);">${s.id} · ${s.kelas}</div>
+                </div>
+                <span class="badge badge-red">KOSONG</span>
+              </div>`).join('')}
+          </div>` : ''}
+
+        ${filled.length > 0 ? `
+          <div class="section-title">Sudah Terisi (${filled.length})</div>
+          <div class="summary-list">
+            ${filled.map(s => `
+              <div class="summary-item filled">
+                <div>
+                  <div style="font-size:0.85rem;font-weight:600;">${s.nama}</div>
+                  <div style="font-size:0.72rem;color:var(--text2);font-family:var(--font-mono);">${s.id} · ${s.kelas}</div>
+                </div>
+                <span class="badge badge-green">${s.status}</span>
+              </div>`).join('')}
+          </div>` : ''}
+      `;
+
+    } catch (e) {
+      el.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div>${e.message || 'Gagal memuat data'}</div>`;
+    }
+  }
+
+  // ── PWA SERVICE WORKER ────────────────────────────────────────────────────
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+</script>
+</body>
+</html>
