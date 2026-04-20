@@ -1,4 +1,3 @@
-<script>
     // CONFIG - Replace with your GAS Web App URL
     const GAS_URL = 'https://script.google.com/macros/s/AKfycbzwgwoKQNXSWn7BrwlzZe1XmVlY0JnGgA6CKY7cjVUXols6Oo_7IyBIiuVDmoQh__wO/exec';
     
@@ -192,4 +191,3 @@
         indicator.classList.remove('show');
       }, 2000);
     }
-  </script>
