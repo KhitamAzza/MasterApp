@@ -333,7 +333,7 @@
       grid.className = 'attendance-grid';
       
       attendanceColumns.forEach((col, idx) => {
-        const currentValue = (student.absensi[col.rawHeader] || '').toUpperCase();
+       const currentValue = (student.absensi[idx] || '').toUpperCase();
         const item = document.createElement('div');
         item.className = 'attendance-item';
         
