@@ -3,45 +3,56 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Master Admin - Edit Absensi</title>
+  <title>Master Admin</title>
   <link rel="stylesheet" href="style.css">
-  
 </head>
 <body>
   <div class="container">
-    <h1>MASTER ADMIN - EDIT ABSENSI</h1>
-    
-    <div class="stats" id="stats">
-      <div class="stat-box">
-        <div class="number" id="totalStudents">-</div>
-        <div class="label">Total Siswa</div>
-      </div>
-      <div class="stat-box">
-        <div class="number" id="totalDays">-</div>
-        <div class="label">Hari Tercatat</div>
-      </div>
-    </div>
-    
-    <div class="search-box">
-      <input 
-        type="text" 
-        id="searchInput" 
-        placeholder="Cari nama siswa..." 
-        autocomplete="off"
-      >
-    </div>
-    
-    <div class="loading" id="loading">Memuat data...</div>
-    <div class="no-results" id="noResults">Tidak ada siswa dengan nama tersebut</div>
-    
-    <div id="studentContainer"></div>
-  </div>
-  
-  <div class="save-indicator" id="saveIndicator"></div>
-<script src="script.js"></script>
+    <h1>MASTER ADMIN</h1>
 
+    <!-- Nav Buttons -->
+    <div class="nav-buttons">
+      <button class="nav-btn" id="btnEditAbsensi" onclick="toggleEditAbsensi()">Edit Absensi</button>
+      <!-- Future buttons go here -->
+    </div>
+
+    <!-- Hidden section, revealed on button click -->
+    <div id="editAbsensiSection" class="section-hidden">
+
+      <div class="stats">
+        <div class="stat-box">
+          <div class="number" id="totalStudents">-</div>
+          <div class="label">Total Siswa</div>
+        </div>
+        <div class="stat-box">
+          <div class="number" id="totalDays">-</div>
+          <div class="label">Hari Tercatat</div>
+        </div>
+      </div>
+
+      <div class="search-box">
+        <input
+          type="text"
+          id="searchInput"
+          placeholder="Cari nama siswa..."
+          autocomplete="off"
+        >
+      </div>
+
+      <div class="loading" id="loading">Memuat data...</div>
+      <div class="no-results" id="noResults">Tidak ada siswa dengan nama tersebut</div>
+      <div id="studentContainer"></div>
+
+    </div>
+  </div>
+
+  <!-- Student Detail Modal -->
+  <div id="studentModal" class="modal">
+    <div class="modal-content" id="modalContent"></div>
+  </div>
+
+  <div class="save-indicator" id="saveIndicator"></div>
+
+  <script src="script.js"></script>
 </body>
-<div id="studentModal" class="modal">
-  <div class="modal-content" id="modalContent"></div>
-</div>
 </html>
