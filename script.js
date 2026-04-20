@@ -2,33 +2,48 @@ const GAS_URL = 'https://script.google.com/macros/s/AKfycbzwgwoKQNXSWn7BrwlzZe1X
 
 let allStudents = [];
 let attendanceColumns = [];
+let dataLoaded = false;
 
 const STATUS_OPTIONS = [
-  { value: '',           label: 'Kosong',    class: '' },
-  { value: 'HADIR',      label: 'HADIR',     class: 'status-hadir' },
-  { value: 'IZIN',       label: 'IZIN',      class: 'status-izin' },
-  { value: 'SAKIT',      label: 'SAKIT',     class: 'status-sakit' },
-  { value: 'ALPHA',      label: 'ALPHA',     class: 'status-alpha' },
-  { value: 'TERLAMBAT',  label: 'TERLAMBAT', class: 'status-alpha' },
-  { value: 'PAGI',       label: 'PAGI',      class: 'status-hadir' }
+  { value: '',          label: 'Kosong',    class: '' },
+  { value: 'HADIR',     label: 'HADIR',     class: 'status-hadir' },
+  { value: 'IZIN',      label: 'IZIN',      class: 'status-izin' },
+  { value: 'SAKIT',     label: 'SAKIT',     class: 'status-sakit' },
+  { value: 'ALPHA',     label: 'ALPHA',     class: 'status-alpha' },
+  { value: 'TERLAMBAT', label: 'TERLAMBAT', class: 'status-alpha' },
+  { value: 'PAGI',      label: 'PAGI',      class: 'status-hadir' }
 ];
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Modal close on backdrop click
-  const modal = document.getElementById('studentModal');
-  modal.addEventListener('click', (e) => {
+  document.getElementById('studentModal').addEventListener('click', (e) => {
     if (e.target.id === 'studentModal') {
-      modal.classList.remove('show');
+      document.getElementById('studentModal').classList.remove('show');
     }
   });
 
-  // Search input
   document.getElementById('searchInput').addEventListener('input', handleSearch);
-
-  loadData();
 });
 
-// ─── Data Loading ────────────────────────────────────────────────────────────
+// ─── Toggle Section ───────────────────────────────────────────────────────────
+
+function toggleEditAbsensi() {
+  const section = document.getElementById('editAbsensiSection');
+  const btn = document.getElementById('btnEditAbsensi');
+  const isOpen = section.classList.contains('section-visible');
+
+  if (isOpen) {
+    section.classList.remove('section-visible');
+    section.classList.add('section-hidden');
+    btn.classList.remove('active');
+  } else {
+    section.classList.remove('section-hidden');
+    section.classList.add('section-visible');
+    btn.classList.add('active');
+    if (!dataLoaded) loadData();
+  }
+}
+
+// ─── Data Loading ─────────────────────────────────────────────────────────────
 
 async function loadData() {
   try {
@@ -36,7 +51,6 @@ async function loadData() {
     const result = await response.json();
     console.log('Loaded:', result);
 
-    // Support both { students, columns } and flat array formats
     if (result && result.students) {
       allStudents = result.students;
       attendanceColumns = result.columns || [];
@@ -50,6 +64,7 @@ async function loadData() {
     document.getElementById('totalStudents').textContent = allStudents.length;
     document.getElementById('totalDays').textContent = attendanceColumns.length;
     document.getElementById('loading').style.display = 'none';
+    dataLoaded = true;
 
   } catch (err) {
     document.getElementById('loading').textContent = 'Error memuat data: ' + err.message;
@@ -57,7 +72,7 @@ async function loadData() {
   }
 }
 
-// ─── Search ──────────────────────────────────────────────────────────────────
+// ─── Search ───────────────────────────────────────────────────────────────────
 
 function handleSearch(e) {
   const query = e.target.value.trim().toLowerCase();
@@ -81,12 +96,10 @@ function handleSearch(e) {
   }
 
   noResults.style.display = 'none';
-  matches.forEach(student => {
-    container.appendChild(createStudentItem(student));
-  });
+  matches.forEach(student => container.appendChild(createStudentItem(student)));
 }
 
-// ─── Student List Item ───────────────────────────────────────────────────────
+// ─── Student List Item ────────────────────────────────────────────────────────
 
 function createStudentItem(student) {
   const item = document.createElement('div');
@@ -99,25 +112,22 @@ function createStudentItem(student) {
   return item;
 }
 
-// ─── Modal ───────────────────────────────────────────────────────────────────
+// ─── Student Modal ────────────────────────────────────────────────────────────
 
 function openStudentModal(student) {
   const modal = document.getElementById('studentModal');
   const content = document.getElementById('modalContent');
-
   content.innerHTML = '';
   content.appendChild(createStudentCard(student));
-
   modal.classList.add('show');
 }
 
-// ─── Student Card ────────────────────────────────────────────────────────────
+// ─── Student Card ─────────────────────────────────────────────────────────────
 
 function createStudentCard(student) {
   const card = document.createElement('div');
   card.className = 'student-card active';
 
-  // Info section
   const info = document.createElement('div');
   info.className = 'student-info';
   info.innerHTML = `
@@ -147,7 +157,6 @@ function createStudentCard(student) {
     </div>
   `;
 
-  // Attendance section
   const attSection = document.createElement('div');
   attSection.className = 'attendance-section';
   attSection.innerHTML = '<h3>Edit Absensi Harian</h3>';
@@ -166,7 +175,7 @@ function createStudentCard(student) {
 
     const select = document.createElement('select');
     select.dataset.row = student.rowIndex;
-    select.dataset.col = col.col + 1; // convert to 1-based for Sheets
+    select.dataset.col = col.col + 1;
     select.dataset.date = col.header;
 
     STATUS_OPTIONS.forEach(opt => {
@@ -196,17 +205,15 @@ function createStudentCard(student) {
   return card;
 }
 
-// ─── Style Helper ────────────────────────────────────────────────────────────
+// ─── Style Helper ─────────────────────────────────────────────────────────────
 
 function updateSelectStyle(select, value) {
   select.className = '';
   const option = STATUS_OPTIONS.find(o => o.value === value);
-  if (option && option.class) {
-    select.classList.add(option.class);
-  }
+  if (option && option.class) select.classList.add(option.class);
 }
 
-// ─── Save Attendance ─────────────────────────────────────────────────────────
+// ─── Save Attendance ──────────────────────────────────────────────────────────
 
 async function saveAttendance(select) {
   const row = parseInt(select.dataset.row);
@@ -236,14 +243,11 @@ async function saveAttendance(select) {
   }
 }
 
-// ─── Toast Indicator ─────────────────────────────────────────────────────────
+// ─── Toast Indicator ──────────────────────────────────────────────────────────
 
 function showIndicator(type, message) {
   const indicator = document.getElementById('saveIndicator');
   indicator.textContent = message;
   indicator.className = `save-indicator ${type} show`;
-
-  setTimeout(() => {
-    indicator.classList.remove('show');
-  }, 2000);
+  setTimeout(() => indicator.classList.remove('show'), 2000);
 }
