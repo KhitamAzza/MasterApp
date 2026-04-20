@@ -177,3 +177,42 @@
       color: #666;
       font-size: 12px;
     }
+    .modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.7);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+}
+
+.modal.show {
+  display: flex;
+}
+
+.modal-content {
+  background: #1a1a1a;
+  padding: 20px;
+  border-radius: 16px;
+  max-width: 900px;
+  width: 95%;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.student-item {
+  background: #1a1a1a;
+  padding: 15px;
+  margin-bottom: 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  border: 1px solid #333;
+}
+
+.student-item:hover {
+  border-color: #00d4ff;
+}
