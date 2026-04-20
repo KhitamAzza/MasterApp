@@ -378,7 +378,29 @@
         select.classList.add(option.class);
       }
     }
-    
+
+    async function saveAttendance(select) {
+  const row = parseInt(select.dataset.row);
+  const col = parseInt(select.dataset.col);
+  const value = select.value;
+
+  try {
+    const response = await fetch(
+      `${GAS_URL}?action=updateAttendance&rowIndex=${row}&columnIndex=${col}&value=${value}`
+    );
+
+    const result = await response.json();
+
+    if (result.status === 'ok') {
+      showIndicator('success', `Tersimpan: ${select.dataset.date}`);
+    } else {
+      throw new Error(result.message);
+    }
+  } catch (err) {
+    showIndicator('error', 'Gagal menyimpan!');
+    console.error(err);
+  }
+}
     async function saveAttendance(select) {
       const data = {
         action: 'updateAttendance',
