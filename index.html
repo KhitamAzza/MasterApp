@@ -1,1016 +1,421 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#0f1117" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <title>MasterApp</title>
-  <link rel="manifest" href="manifest.json" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet" />
-
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Master Admin - Edit Absensi</title>
   <style>
-    :root {
-      --bg: #0f1117;
-      --surface: #16181f;
-      --surface2: #1e2028;
-      --border: #2a2d38;
-      --accent: #6ee7b7;
-      --accent2: #38bdf8;
-      --danger: #f87171;
-      --warn: #fbbf24;
-      --text: #e8eaf0;
-      --text2: #8b8fa8;
-      --radius: 12px;
-      --font-display: 'Syne', sans-serif;
-      --font-mono: 'Space Mono', monospace;
-    }
-
     * { box-sizing: border-box; margin: 0; padding: 0; }
-
     body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: var(--font-display);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0f0f0f;
+      color: #fff;
       min-height: 100vh;
-      overflow-x: hidden;
+      padding: 20px;
     }
-
-    /* ── NOISE TEXTURE OVERLAY ── */
-    body::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
-      pointer-events: none;
-      z-index: 0;
-      opacity: 0.4;
-    }
-
-    /* ── HEADER ── */
-    header {
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      background: rgba(15,17,23,0.85);
-      backdrop-filter: blur(16px);
-      border-bottom: 1px solid var(--border);
-      padding: 16px 20px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .logo {
-      font-size: 1.25rem;
-      font-weight: 800;
-      letter-spacing: -0.5px;
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
+    .container { max-width: 1400px; margin: 0 auto; }
+    h1 { 
+      text-align: center; 
+      margin-bottom: 30px;
+      background: linear-gradient(90deg, #00d4ff, #7b2cbf);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
-      background-clip: text;
     }
-
-    .logo span {
-      font-family: var(--font-mono);
-      font-size: 0.65rem;
-      font-weight: 400;
-      color: var(--text2);
-      -webkit-text-fill-color: var(--text2);
-      display: block;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      margin-top: -2px;
-    }
-
-    /* ── TABS ── */
-    .tabs {
-      display: flex;
-      gap: 4px;
-      padding: 16px 20px 0;
-      position: relative;
-      z-index: 1;
-    }
-
-    .tab {
-      flex: 1;
-      padding: 10px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-bottom: none;
-      border-radius: var(--radius) var(--radius) 0 0;
-      color: var(--text2);
-      font-family: var(--font-display);
-      font-size: 0.8rem;
-      font-weight: 600;
-      letter-spacing: 0.5px;
-      cursor: pointer;
-      transition: all 0.2s;
-      text-align: center;
-      text-transform: uppercase;
-    }
-
-    .tab.active {
-      background: var(--surface2);
-      color: var(--accent);
-      border-color: var(--accent);
-      border-bottom-color: var(--surface2);
-    }
-
-    /* ── MAIN CONTENT ── */
-    .content {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 0 0 var(--radius) var(--radius);
-      margin: 0 20px;
+    
+    /* Search Bar */
+    .search-box {
+      background: #1a1a1a;
       padding: 20px;
-      position: relative;
-      z-index: 1;
-      min-height: 70vh;
+      border-radius: 16px;
+      margin-bottom: 20px;
+      border: 1px solid #333;
     }
-
-    /* ── PANELS ── */
-    .panel { display: none; }
-    .panel.active { display: block; animation: fadeIn 0.25s ease; }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(6px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    /* ── SEARCH BAR ── */
-    .search-wrap {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 16px;
-    }
-
-    input[type="text"], input[type="number"], select, textarea {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      color: var(--text);
-      font-family: var(--font-mono);
-      font-size: 0.85rem;
-      padding: 10px 14px;
-      outline: none;
-      transition: border-color 0.2s;
+    .search-box input {
       width: 100%;
-    }
-
-    input:focus, select:focus, textarea:focus {
-      border-color: var(--accent);
-    }
-
-    input::placeholder { color: var(--text2); }
-
-    /* ── BUTTONS ── */
-    .btn {
-      padding: 10px 18px;
-      border-radius: 8px;
+      padding: 15px 20px;
+      font-size: 18px;
       border: none;
-      font-family: var(--font-display);
-      font-size: 0.8rem;
-      font-weight: 700;
-      letter-spacing: 0.5px;
-      cursor: pointer;
-      transition: all 0.15s;
-      white-space: nowrap;
-      text-transform: uppercase;
-    }
-
-    .btn-primary {
-      background: var(--accent);
-      color: #0f1117;
-    }
-    .btn-primary:hover { filter: brightness(1.1); transform: translateY(-1px); }
-
-    .btn-secondary {
-      background: transparent;
-      border: 1px solid var(--border);
-      color: var(--text2);
-    }
-    .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
-
-    .btn-danger {
-      background: transparent;
-      border: 1px solid var(--danger);
-      color: var(--danger);
-    }
-    .btn-danger:hover { background: var(--danger); color: #fff; }
-
-    .btn-save {
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      color: #0f1117;
-      width: 100%;
-      padding: 12px;
-      font-size: 0.85rem;
-      border-radius: 10px;
-    }
-
-    .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; }
-
-    /* ── SEARCH RESULTS ── */
-    .results-list {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      max-height: 300px;
-      overflow-y: auto;
-    }
-
-    .result-item {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 12px 14px;
-      cursor: pointer;
-      transition: all 0.15s;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .result-item:hover {
-      border-color: var(--accent);
-      transform: translateX(3px);
-    }
-
-    .result-name {
-      font-size: 0.9rem;
-      font-weight: 600;
-    }
-
-    .result-meta {
-      font-size: 0.75rem;
-      color: var(--text2);
-      font-family: var(--font-mono);
-      margin-top: 2px;
-    }
-
-    .badge {
-      font-size: 0.65rem;
-      padding: 3px 8px;
-      border-radius: 20px;
-      font-family: var(--font-mono);
-      font-weight: 700;
-      letter-spacing: 0.5px;
-    }
-
-    .badge-green { background: rgba(110,231,183,0.15); color: var(--accent); border: 1px solid rgba(110,231,183,0.3); }
-    .badge-red { background: rgba(248,113,113,0.15); color: var(--danger); border: 1px solid rgba(248,113,113,0.3); }
-    .badge-blue { background: rgba(56,189,248,0.15); color: var(--accent2); border: 1px solid rgba(56,189,248,0.3); }
-    .badge-gray { background: rgba(139,143,168,0.15); color: var(--text2); border: 1px solid rgba(139,143,168,0.3); }
-
-    /* ── STUDENT CARD ── */
-    .student-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 16px;
-      margin-bottom: 16px;
-    }
-
-    .card-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 12px;
-    }
-
-    .student-name {
-      font-size: 1.1rem;
-      font-weight: 800;
-      line-height: 1.2;
-    }
-
-    .student-id {
-      font-family: var(--font-mono);
-      font-size: 0.7rem;
-      color: var(--text2);
-      margin-top: 2px;
-    }
-
-    .info-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-      margin-bottom: 16px;
-    }
-
-    .info-item {
-      background: var(--surface2);
-      border-radius: 8px;
-      padding: 10px 12px;
-    }
-
-    .info-label {
-      font-size: 0.65rem;
-      color: var(--text2);
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      font-family: var(--font-mono);
-      margin-bottom: 4px;
-    }
-
-    .info-value {
-      font-size: 0.9rem;
-      font-weight: 600;
-    }
-
-    .info-value.editable-field {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    /* ── SECTION TITLE ── */
-    .section-title {
-      font-size: 0.7rem;
-      text-transform: uppercase;
-      letter-spacing: 2px;
-      color: var(--text2);
-      font-family: var(--font-mono);
-      margin-bottom: 10px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .section-title::after {
-      content: '';
-      flex: 1;
-      height: 1px;
-      background: var(--border);
-    }
-
-    /* ── ATTENDANCE GRID ── */
-    .attendance-grid {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      max-height: 280px;
-      overflow-y: auto;
-      padding-right: 4px;
-    }
-
-    .attendance-row {
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 8px;
-      align-items: center;
-      background: var(--surface2);
-      border-radius: 8px;
-      padding: 8px 10px;
-    }
-
-    .attendance-date {
-      font-family: var(--font-mono);
-      font-size: 0.75rem;
-      color: var(--text2);
-    }
-
-    .attendance-select {
-      width: 130px;
-      padding: 6px 10px;
-      font-size: 0.75rem;
-    }
-
-    .attendance-custom {
-      width: 100%;
-      padding: 6px 10px;
-      font-size: 0.75rem;
-      margin-top: 6px;
-      display: none;
-    }
-
-    /* ── SUMMARY TABLE ── */
-    .filter-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr auto;
-      gap: 8px;
-      margin-bottom: 16px;
-    }
-
-    .summary-stats {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
-      margin-bottom: 16px;
-    }
-
-    .stat-box {
-      background: var(--surface);
-      border-radius: 8px;
-      padding: 12px;
-      text-align: center;
-      border: 1px solid var(--border);
-    }
-
-    .stat-num {
-      font-size: 1.5rem;
-      font-weight: 800;
-      font-family: var(--font-mono);
-    }
-
-    .stat-label {
-      font-size: 0.65rem;
-      color: var(--text2);
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      margin-top: 2px;
-    }
-
-    .summary-list {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      max-height: 350px;
-      overflow-y: auto;
-    }
-
-    .summary-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: var(--surface);
-      border-radius: 8px;
-      padding: 10px 14px;
-      border: 1px solid var(--border);
-    }
-
-    .summary-item.empty {
-      border-color: rgba(248,113,113,0.2);
-      background: rgba(248,113,113,0.04);
-    }
-
-    .summary-item.filled {
-      border-color: rgba(110,231,183,0.2);
-      background: rgba(110,231,183,0.04);
-    }
-
-    /* ── TOAST ── */
-    .toast {
-      position: fixed;
-      bottom: 24px;
-      left: 50%;
-      transform: translateX(-50%) translateY(80px);
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 12px 20px;
-      font-size: 0.85rem;
-      font-weight: 600;
-      z-index: 999;
-      transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
-      white-space: nowrap;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
-    }
-
-    .toast.show { transform: translateX(-50%) translateY(0); }
-    .toast.success { border-color: var(--accent); color: var(--accent); }
-    .toast.error { border-color: var(--danger); color: var(--danger); }
-
-    /* ── LOADER ── */
-    .loader {
-      display: inline-block;
-      width: 16px; height: 16px;
-      border: 2px solid var(--border);
-      border-top-color: var(--accent);
-      border-radius: 50%;
-      animation: spin 0.7s linear infinite;
-      vertical-align: middle;
-      margin-right: 6px;
-    }
-
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    .empty-state {
-      text-align: center;
-      padding: 40px 20px;
-      color: var(--text2);
-      font-size: 0.85rem;
-    }
-
-    .empty-state .icon { font-size: 2rem; margin-bottom: 8px; }
-
-    /* ── DIVIDER ── */
-    hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
-
-    /* ── BACK BTN ── */
-    .back-btn {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      background: none;
-      border: none;
-      color: var(--text2);
-      font-family: var(--font-display);
-      font-size: 0.8rem;
-      cursor: pointer;
-      padding: 0;
-      margin-bottom: 14px;
-      transition: color 0.2s;
-    }
-    .back-btn:hover { color: var(--accent); }
-
-    /* ── SCROLLBAR ── */
-    ::-webkit-scrollbar { width: 4px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
-
-    /* ── PWA INSTALL ── */
-    .install-banner {
-      display: none;
-      position: fixed;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: var(--surface2);
-      border: 1px solid var(--accent);
       border-radius: 12px;
-      padding: 14px 18px;
-      z-index: 200;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      background: #0f0f0f;
+      color: #fff;
+      outline: none;
+    }
+    .search-box input::placeholder { color: #666; }
+    
+    /* Student Card */
+    .student-card {
+      background: #1a1a1a;
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 20px;
+      border: 1px solid #333;
       display: none;
-      align-items: center;
-      gap: 12px;
-      font-size: 0.85rem;
     }
-
-    .online-dot {
-      width: 8px; height: 8px;
-      border-radius: 50%;
-      background: var(--accent);
-      box-shadow: 0 0 6px var(--accent);
+    .student-card.active { display: block; }
+    .student-info {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid #333;
+    }
+    .info-item label {
+      color: #888;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .info-item .value {
+      font-size: 18px;
+      font-weight: 600;
+      margin-top: 5px;
+    }
+    .info-item .value.id { color: #00d4ff; }
+    .info-item .value.nama { color: #fff; font-size: 24px; }
+    .info-item .value.kelas { color: #7b2cbf; }
+    .info-item .value.ekstra { color: #ff6b35; }
+    
+    /* Attendance Grid */
+    .attendance-section h3 {
+      margin-bottom: 15px;
+      color: #00d4ff;
+    }
+    .attendance-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 10px;
+    }
+    .attendance-item {
+      background: #0f0f0f;
+      padding: 15px;
+      border-radius: 12px;
+      border: 1px solid #333;
+      transition: all 0.3s;
+    }
+    .attendance-item:hover { border-color: #00d4ff; }
+    .attendance-item label {
+      display: block;
+      color: #888;
+      font-size: 11px;
+      margin-bottom: 8px;
+    }
+    .attendance-item select {
+      width: 100%;
+      padding: 10px;
+      border: none;
+      border-radius: 8px;
+      background: #1a1a1a;
+      color: #fff;
+      font-size: 14px;
+      cursor: pointer;
+      outline: none;
+    }
+    .attendance-item select:focus { background: #252525; }
+    
+    /* Status Colors */
+    .status-hadir { background: #1a4d2e !important; color: #4ade80 !important; }
+    .status-izin { background: #713f12 !important; color: #fbbf24 !important; }
+    .status-sakit { background: #1e3a8a !important; color: #60a5fa !important; }
+    .status-alpha { background: #7f1d1d !important; color: #f87171 !important; }
+    
+    /* Save Indicator */
+    .save-indicator {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 15px 25px;
+      border-radius: 12px;
+      font-weight: 600;
+      transform: translateX(150%);
+      transition: transform 0.3s;
+      z-index: 1000;
+    }
+    .save-indicator.show { transform: translateX(0); }
+    .save-indicator.success { background: #1a4d2e; color: #4ade80; }
+    .save-indicator.error { background: #7f1d1d; color: #f87171; }
+    
+    /* Loading */
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #666;
+    }
+    .loading::after {
+      content: '';
       display: inline-block;
-      margin-right: 6px;
+      width: 20px;
+      height: 20px;
+      border: 2px solid #00d4ff;
+      border-top-color: transparent;
+      border-radius: 50%;
+      margin-left: 10px;
+      animation: spin 1s linear infinite;
     }
-
-    .online-dot.offline { background: var(--danger); box-shadow: 0 0 6px var(--danger); }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    
+    /* No Results */
+    .no-results {
+      text-align: center;
+      padding: 40px;
+      color: #666;
+      display: none;
+    }
+    
+    /* Stats */
+    .stats {
+      display: flex;
+      gap: 20px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .stat-box {
+      background: #1a1a1a;
+      padding: 15px 25px;
+      border-radius: 12px;
+      border: 1px solid #333;
+    }
+    .stat-box .number {
+      font-size: 28px;
+      font-weight: 700;
+      color: #00d4ff;
+    }
+    .stat-box .label {
+      color: #666;
+      font-size: 12px;
+    }
   </style>
 </head>
 <body>
-
-<header>
-  <div class="logo">
-    MasterApp
-    <span>SMK Diponegoro Tumpang</span>
-  </div>
-  <div style="font-size:0.75rem; color:var(--text2); font-family:var(--font-mono);">
-    <span class="online-dot" id="onlineDot"></span>
-    <span id="onlineLabel">Online</span>
-  </div>
-</header>
-
-<div class="tabs">
-  <button class="tab active" onclick="switchTab('search')">🔍 Siswa</button>
-  <button class="tab" onclick="switchTab('summary')">📊 Absensi</button>
-</div>
-
-<div class="content">
-
-  <!-- ══ PANEL: SEARCH ══ -->
-  <div class="panel active" id="panel-search">
-
-    <!-- Search View -->
-    <div id="view-search">
-      <div class="search-wrap">
-        <input type="text" id="searchInput" placeholder="Cari nama, ID, kelas, ekstra..." />
-        <button class="btn btn-primary" onclick="doSearch()">Cari</button>
+  <div class="container">
+    <h1>MASTER ADMIN - EDIT ABSENSI</h1>
+    
+    <div class="stats" id="stats">
+      <div class="stat-box">
+        <div class="number" id="totalStudents">-</div>
+        <div class="label">Total Siswa</div>
       </div>
-      <div id="searchResults">
-        <div class="empty-state">
-          <div class="icon">🔍</div>
-          Ketik nama atau ID siswa untuk mulai
-        </div>
+      <div class="stat-box">
+        <div class="number" id="totalDays">-</div>
+        <div class="label">Hari Tercatat</div>
       </div>
     </div>
-
-    <!-- Student Detail View -->
-    <div id="view-detail" style="display:none;">
-      <button class="back-btn" onclick="backToSearch()">← Kembali ke pencarian</button>
-
-      <div class="student-card" id="studentCard">
-        <!-- filled by JS -->
-      </div>
-
-      <div class="section-title">Edit Data</div>
-
-      <!-- Ekstra -->
-      <div style="margin-bottom:12px;">
-        <div class="info-label" style="margin-bottom:6px;">Ekstra</div>
-        <input type="text" id="editEkstra" placeholder="Nama ekstra..." />
-      </div>
-
-      <!-- Denda Dibayar -->
-      <div style="margin-bottom:16px;">
-        <div class="info-label" style="margin-bottom:6px;">Denda Dibayar (Rp)</div>
-        <input type="number" id="editDenda" placeholder="0" min="0" />
-      </div>
-
-      <hr />
-
-      <div class="section-title">Absensi Harian</div>
-      <div class="attendance-grid" id="attendanceGrid">
-        <!-- filled by JS -->
-      </div>
-
-      <hr />
-
-      <button class="btn btn-save" onclick="saveStudent()" id="saveBtn">
-        💾 Simpan Perubahan
-      </button>
+    
+    <div class="search-box">
+      <input 
+        type="text" 
+        id="searchInput" 
+        placeholder="Cari nama siswa..." 
+        autocomplete="off"
+      >
     </div>
-
+    
+    <div class="loading" id="loading">Memuat data...</div>
+    <div class="no-results" id="noResults">Tidak ada siswa dengan nama tersebut</div>
+    
+    <div id="studentContainer"></div>
   </div>
+  
+  <div class="save-indicator" id="saveIndicator"></div>
 
-  <!-- ══ PANEL: SUMMARY ══ -->
-  <div class="panel" id="panel-summary">
-
-    <div class="filter-row">
-      <select id="filterEkstra">
-        <option value="all">Semua Ekstra</option>
-      </select>
-      <select id="filterDate">
-        <option value="">Pilih Tanggal...</option>
-      </select>
-      <button class="btn btn-primary" onclick="loadSummary()">Tampil</button>
-    </div>
-
-    <div id="summaryContent">
-      <div class="empty-state">
-        <div class="icon">📊</div>
-        Pilih ekstra dan tanggal untuk melihat ringkasan
-      </div>
-    </div>
-
-  </div>
-
-</div>
-
-<!-- Toast -->
-<div class="toast" id="toast"></div>
-
-<script>
-  const GAS_URL = "https://script.google.com/macros/s/AKfycbzwgwoKQNXSWn7BrwlzZe1XmVlY0JnGgA6CKY7cjVUXols6Oo_7IyBIiuVDmoQh__wO/exec";
-
-  let currentStudent = null;
-  let searchTimeout = null;
-
-  // ── ONLINE STATUS ──────────────────────────────────────────────────────────
-  function updateOnline() {
-    const dot = document.getElementById('onlineDot');
-    const label = document.getElementById('onlineLabel');
-    if (navigator.onLine) {
-      dot.className = 'online-dot';
-      label.textContent = 'Online';
-    } else {
-      dot.className = 'online-dot offline';
-      label.textContent = 'Offline';
-    }
-  }
-  window.addEventListener('online', updateOnline);
-  window.addEventListener('offline', updateOnline);
-  updateOnline();
-
-  // ── TABS ──────────────────────────────────────────────────────────────────
-  function switchTab(tab) {
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-    event.target.classList.add('active');
-    document.getElementById('panel-' + tab).classList.add('active');
-
-    if (tab === 'summary') initSummaryFilters();
-  }
-
-  // ── TOAST ─────────────────────────────────────────────────────────────────
-  function showToast(msg, type = 'success') {
-    const t = document.getElementById('toast');
-    t.textContent = msg;
-    t.className = 'toast ' + type + ' show';
-    setTimeout(() => t.classList.remove('show'), 3000);
-  }
-
-  // ── API CALL (no-cors via jsonp trick using fetch no-cors for GAS) ─────────
-  async function gasGet(params) {
-    const url = GAS_URL + '?' + new URLSearchParams(params);
-    const res = await fetch(url, { redirect: 'follow' });
-    return res.json();
-  }
-
-  async function gasPost(body) {
-    const res = await fetch(GAS_URL, {
-      method: 'POST',
-      redirect: 'follow',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(body)
+  <script>
+    // CONFIG - Replace with your GAS Web App URL
+    const GAS_URL = 'https://script.google.com/macros/s/AKfycbzwgwoKQNXSWn7BrwlzZe1XmVlY0JnGgA6CKY7cjVUXols6Oo_7IyBIiuVDmoQh__wO/exec';
+    
+    let allStudents = [];
+    let attendanceColumns = [];
+    
+    // Status options
+    const STATUS_OPTIONS = [
+  { value: '', label: 'Kosong', class: '' },
+  { value: 'HADIR', label: 'HADIR', class: 'status-hadir' },
+  { value: 'IZIN', label: 'IZIN', class: 'status-izin' },
+  { value: 'SAKIT', label: 'SAKIT', class: 'status-sakit' },
+  { value: 'ALPHA', label: 'ALPHA', class: 'status-alpha' },
+  { value: 'TERLAMBAT', label: 'TERLAMBAT', class: 'status-alpha' },
+  { value: 'PAGI', label: 'PAGI', class: 'status-hadir' }
+];
+    
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      loadData();
+      document.getElementById('searchInput').addEventListener('input', handleSearch);
     });
-    return res.json();
-  }
-
-  // ── SEARCH ────────────────────────────────────────────────────────────────
-  document.getElementById('searchInput').addEventListener('input', function () {
-    clearTimeout(searchTimeout);
-    const q = this.value.trim();
-    if (q.length < 2) {
-      document.getElementById('searchResults').innerHTML = `
-        <div class="empty-state"><div class="icon">🔍</div>Ketik minimal 2 karakter</div>`;
-      return;
+    
+    async function loadData() {
+      try {
+        const response = await fetch(`${GAS_URL}?action=masterData`);
+        const result = await response.json();
+        
+        if (Array.isArray(result) && result.length > 0) {
+          allStudents = result;
+          attendanceColumns = result[0].absenColumns || [];
+          
+          document.getElementById('totalStudents').textContent = result.length;
+          document.getElementById('totalDays').textContent = attendanceColumns.length;
+          
+          document.getElementById('loading').style.display = 'none';
+        } else {
+          throw new Error('Invalid data format');
+        }
+      } catch (err) {
+        document.getElementById('loading').textContent = 'Error: ' + err.message;
+      }
     }
-    searchTimeout = setTimeout(() => doSearch(), 400);
-  });
-
-  document.getElementById('searchInput').addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') doSearch();
-  });
-
-  async function doSearch() {
-    const q = document.getElementById('searchInput').value.trim();
-    if (!q) return;
-
-    const el = document.getElementById('searchResults');
-    el.innerHTML = `<div class="empty-state"><span class="loader"></span>Mencari...</div>`;
-
-    try {
-      const data = await gasGet({ action: 'masterSearch', query: q });
-
-      if (!data.results || data.results.length === 0) {
-        el.innerHTML = `<div class="empty-state"><div class="icon">😕</div>Siswa tidak ditemukan</div>`;
+    
+    function handleSearch(e) {
+      const query = e.target.value.trim().toLowerCase();
+      const container = document.getElementById('studentContainer');
+      const noResults = document.getElementById('noResults');
+      
+      container.innerHTML = '';
+      
+      if (!query) {
+        noResults.style.display = 'none';
         return;
       }
-
-      el.innerHTML = `<div class="results-list">${data.results.map(s => `
-        <div class="result-item" onclick="openStudent('${s.id}')">
-          <div>
-            <div class="result-name">${s.nama}</div>
-            <div class="result-meta">${s.id} · ${s.kelas} · ${s.ekstra}</div>
-          </div>
-          <div style="display:flex;gap:6px;align-items:center;">
-            ${s.sisaDenda > 0 ? `<span class="badge badge-red">Rp ${s.sisaDenda.toLocaleString('id')}</span>` : ''}
-            <span class="badge badge-blue">→</span>
-          </div>
-        </div>`).join('')}</div>`;
-
-    } catch (e) {
-      el.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div>Gagal mengambil data</div>`;
-    }
-  }
-
-  // ── OPEN STUDENT ──────────────────────────────────────────────────────────
-  async function openStudent(id) {
-    document.getElementById('view-search').style.display = 'none';
-    document.getElementById('view-detail').style.display = 'block';
-    document.getElementById('studentCard').innerHTML = `<div class="empty-state"><span class="loader"></span>Memuat data...</div>`;
-    document.getElementById('attendanceGrid').innerHTML = '';
-
-    try {
-      const data = await gasGet({ action: 'masterStudent', id });
-      if (data.status !== 'ok') throw new Error(data.message);
-      currentStudent = data.student;
-      renderStudentDetail(data.student);
-    } catch (e) {
-      showToast('Gagal memuat data siswa', 'error');
-    }
-  }
-
-  function renderStudentDetail(s) {
-    // Info card
-    document.getElementById('studentCard').innerHTML = `
-      <div class="card-header">
-        <div>
-          <div class="student-name">${s.nama}</div>
-          <div class="student-id">${s.id}</div>
-        </div>
-        <span class="badge ${s.status === 'Aktif' ? 'badge-green' : 'badge-gray'}">${s.status || '-'}</span>
-      </div>
-      <div class="info-grid">
-        <div class="info-item">
-          <div class="info-label">Kelas</div>
-          <div class="info-value">${s.kelas || '-'}</div>
-        </div>
-        <div class="info-item">
-          <div class="info-label">Ekstra</div>
-          <div class="info-value">${s.ekstra || '-'}</div>
-        </div>
-        <div class="info-item">
-          <div class="info-label">Total Denda</div>
-          <div class="info-value">Rp ${(s.denda||0).toLocaleString('id')}</div>
-        </div>
-        <div class="info-item">
-          <div class="info-label">Sisa Denda</div>
-          <div class="info-value" style="color:${s.sisaDenda > 0 ? 'var(--danger)' : 'var(--accent)'}">
-            Rp ${(s.sisaDenda||0).toLocaleString('id')}
-          </div>
-        </div>
-      </div>
-      ${s.syaratKhusus ? `<div style="font-size:0.75rem;color:var(--warn);font-family:var(--font-mono);">⚠️ ${s.syaratKhusus}</div>` : ''}
-    `;
-
-    // Pre-fill edit fields
-    document.getElementById('editEkstra').value = s.ekstra || '';
-    document.getElementById('editDenda').value = s.dendaDibayar || 0;
-
-    // Attendance
-    const grid = document.getElementById('attendanceGrid');
-    if (!s.attendance || s.attendance.length === 0) {
-      grid.innerHTML = `<div class="empty-state" style="padding:16px;">Tidak ada data absensi</div>`;
-      return;
-    }
-
-    grid.innerHTML = s.attendance.map(a => `
-      <div class="attendance-row">
-        <div class="attendance-date">📅 ${a.tanggal}</div>
-        <div style="display:flex;flex-direction:column;gap:4px;">
-          <select class="attendance-select" data-col="${a.colIndex}" onchange="handleAttendanceChange(this)">
-            <option value="">— Kosong —</option>
-            <option value="HADIR" ${a.status === 'HADIR' ? 'selected' : ''}>HADIR</option>
-            <option value="ALPHA" ${a.status === 'ALPHA' ? 'selected' : ''}>ALPHA</option>
-            <option value="IZIN"  ${a.status === 'IZIN'  ? 'selected' : ''}>IZIN</option>
-            <option value="SAKIT" ${a.status === 'SAKIT' ? 'selected' : ''}>SAKIT</option>
-            <option value="LAINNYA" ${(a.status && !['HADIR','ALPHA','IZIN','SAKIT',''].includes(a.status)) ? 'selected' : ''}>LAINNYA...</option>
-          </select>
-          <input type="text"
-            class="attendance-custom"
-            data-col="${a.colIndex}"
-            placeholder="Ketik nilai..."
-            value="${(a.status && !['HADIR','ALPHA','IZIN','SAKIT',''].includes(a.status)) ? a.status : ''}"
-            style="display:${(a.status && !['HADIR','ALPHA','IZIN','SAKIT',''].includes(a.status)) ? 'block' : 'none'}"
-          />
-        </div>
-      </div>`).join('');
-  }
-
-  function handleAttendanceChange(sel) {
-    const customInput = sel.parentElement.querySelector('.attendance-custom');
-    if (sel.value === 'LAINNYA') {
-      customInput.style.display = 'block';
-      customInput.focus();
-    } else {
-      customInput.style.display = 'none';
-    }
-  }
-
-  // ── SAVE STUDENT ──────────────────────────────────────────────────────────
-  async function saveStudent() {
-    if (!currentStudent) return;
-
-    const btn = document.getElementById('saveBtn');
-    btn.disabled = true;
-    btn.innerHTML = '<span class="loader"></span>Menyimpan...';
-
-    // Collect attendance
-    const attendance = [];
-    document.querySelectorAll('.attendance-select').forEach(sel => {
-      const col = parseInt(sel.dataset.col);
-      let val = sel.value;
-      if (val === 'LAINNYA') {
-        const custom = sel.parentElement.querySelector('.attendance-custom');
-        val = custom.value.trim();
+      
+      const matches = allStudents.filter(s => 
+        s.nama.toLowerCase().includes(query)
+      );
+      
+      if (matches.length === 0) {
+        noResults.style.display = 'block';
+        return;
       }
-      attendance.push({ colIndex: col, status: val });
-    });
-
-    const payload = {
-      action: 'masterUpdate',
-      studentId: currentStudent.id,
-      ekstra: document.getElementById('editEkstra').value.trim(),
-      dendaDibayar: parseFloat(document.getElementById('editDenda').value) || 0,
-      attendance
-    };
-
-    try {
-      const res = await gasPost(payload);
-      if (res.status === 'ok') {
-        currentStudent = res.student;
-        renderStudentDetail(res.student);
-        showToast('✅ Data berhasil disimpan!', 'success');
-      } else {
-        showToast('❌ ' + (res.message || 'Gagal menyimpan'), 'error');
-      }
-    } catch (e) {
-      showToast('❌ Koneksi gagal', 'error');
+      
+      noResults.style.display = 'none';
+      matches.forEach(student => {
+        container.appendChild(createStudentCard(student));
+      });
     }
-
-    btn.disabled = false;
-    btn.innerHTML = '💾 Simpan Perubahan';
-  }
-
-  function backToSearch() {
-    document.getElementById('view-detail').style.display = 'none';
-    document.getElementById('view-search').style.display = 'block';
-    currentStudent = null;
-  }
-
-  // ── SUMMARY ───────────────────────────────────────────────────────────────
-  async function initSummaryFilters() {
-    const ekstraEl = document.getElementById('filterEkstra');
-    const dateEl = document.getElementById('filterDate');
-
-    if (ekstraEl.options.length <= 1) {
-      try {
-        const [ekstraData, dateData] = await Promise.all([
-          gasGet({ action: 'masterEkstra' }),
-          gasGet({ action: 'masterDates' })
-        ]);
-
-        if (ekstraData.ekstraList) {
-          ekstraData.ekstraList.forEach(e => {
-            const opt = document.createElement('option');
-            opt.value = e; opt.textContent = e;
-            ekstraEl.appendChild(opt);
-          });
-        }
-
-        if (dateData.dates) {
-          dateData.dates.forEach(d => {
-            const opt = document.createElement('option');
-            opt.value = d; opt.textContent = d;
-            dateEl.appendChild(opt);
-          });
-          // default to latest date
-          if (dateData.dates.length > 0) {
-            dateEl.value = dateData.dates[dateData.dates.length - 1];
-          }
-        }
-      } catch (e) {
-        showToast('Gagal memuat filter', 'error');
-      }
-    }
-  }
-
-  async function loadSummary() {
-    const ekstra = document.getElementById('filterEkstra').value;
-    const tanggal = document.getElementById('filterDate').value;
-
-    if (!tanggal) { showToast('Pilih tanggal dulu', 'error'); return; }
-
-    const el = document.getElementById('summaryContent');
-    el.innerHTML = `<div class="empty-state"><span class="loader"></span>Memuat ringkasan...</div>`;
-
-    try {
-      const data = await gasGet({ action: 'masterSummary', ekstra, tanggal });
-      if (data.status !== 'ok') throw new Error(data.message);
-
-      const filled = data.summary.filter(s => s.status !== '');
-      const empty = data.summary.filter(s => s.status === '');
-      const total = data.summary.length;
-
-      el.innerHTML = `
-        <div class="summary-stats">
-          <div class="stat-box">
-            <div class="stat-num" style="color:var(--text)">${total}</div>
-            <div class="stat-label">Total</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-num" style="color:var(--accent)">${filled.length}</div>
-            <div class="stat-label">Terisi</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-num" style="color:var(--danger)">${empty.length}</div>
-            <div class="stat-label">Kosong</div>
-          </div>
+    
+    function createStudentCard(student) {
+      const card = document.createElement('div');
+      card.className = 'student-card active';
+      
+      // Info section
+      const info = document.createElement('div');
+      info.className = 'student-info';
+      info.innerHTML = `
+        <div class="info-item">
+          <label>ID</label>
+          <div class="value id">${student.id}</div>
         </div>
-
-        ${empty.length > 0 ? `
-          <div class="section-title">Belum Terisi (${empty.length})</div>
-          <div class="summary-list" style="margin-bottom:12px;">
-            ${empty.map(s => `
-              <div class="summary-item empty">
-                <div>
-                  <div style="font-size:0.85rem;font-weight:600;">${s.nama}</div>
-                  <div style="font-size:0.72rem;color:var(--text2);font-family:var(--font-mono);">${s.id} · ${s.kelas}</div>
-                </div>
-                <span class="badge badge-red">KOSONG</span>
-              </div>`).join('')}
-          </div>` : ''}
-
-        ${filled.length > 0 ? `
-          <div class="section-title">Sudah Terisi (${filled.length})</div>
-          <div class="summary-list">
-            ${filled.map(s => `
-              <div class="summary-item filled">
-                <div>
-                  <div style="font-size:0.85rem;font-weight:600;">${s.nama}</div>
-                  <div style="font-size:0.72rem;color:var(--text2);font-family:var(--font-mono);">${s.id} · ${s.kelas}</div>
-                </div>
-                <span class="badge badge-green">${s.status}</span>
-              </div>`).join('')}
-          </div>` : ''}
+        <div class="info-item">
+          <label>Nama</label>
+          <div class="value nama">${student.nama}</div>
+        </div>
+        <div class="info-item">
+          <label>Kelas</label>
+          <div class="value kelas">${student.kelas}</div>
+        </div>
+        <div class="info-item">
+          <label>Ekstra</label>
+          <div class="value ekstra">${student.ekstra}</div>
+        </div>
+        <div class="info-item">
+          <label>Denda</label>
+          <div class="value">Rp ${student.denda.toLocaleString()}</div>
+        </div>
+        <div class="info-item">
+          <label>Status</label>
+          <div class="value">${student.status}</div>
+        </div>
       `;
-
-    } catch (e) {
-      el.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div>${e.message || 'Gagal memuat data'}</div>`;
+      
+      // Attendance section
+      const attSection = document.createElement('div');
+      attSection.className = 'attendance-section';
+      attSection.innerHTML = '<h3>Edit Absensi Harian</h3>';
+      
+      const grid = document.createElement('div');
+      grid.className = 'attendance-grid';
+      
+      attendanceColumns.forEach((col, idx) => {
+        const currentValue = (student.absensi[col.rawHeader] || '').toUpperCase();
+        const item = document.createElement('div');
+        item.className = 'attendance-item';
+        
+        const select = document.createElement('select');
+        select.dataset.row = student.rowIndex;
+        select.dataset.col = col.col + 1; // 1-based for Sheets
+        select.dataset.date = col.header;
+        
+        STATUS_OPTIONS.forEach(opt => {
+          const option = document.createElement('option');
+          option.value = opt.value;
+          option.textContent = opt.label;
+          if (opt.value === currentValue) option.selected = true;
+          select.appendChild(option);
+        });
+        
+        // Apply color class
+        updateSelectStyle(select, currentValue);
+        
+        select.addEventListener('change', (e) => {
+          updateSelectStyle(e.target, e.target.value);
+          saveAttendance(e.target);
+        });
+        
+        item.innerHTML = `<label>${col.header}</label>`;
+        item.appendChild(select);
+        grid.appendChild(item);
+      });
+      
+      attSection.appendChild(grid);
+      
+      card.appendChild(info);
+      card.appendChild(attSection);
+      
+      return card;
     }
-  }
-
-  // ── PWA SERVICE WORKER ────────────────────────────────────────────────────
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js').catch(() => {});
-  }
-</script>
+    
+    function updateSelectStyle(select, value) {
+      select.className = '';
+      const option = STATUS_OPTIONS.find(o => o.value === value);
+      if (option && option.class) {
+        select.classList.add(option.class);
+      }
+    }
+    
+    async function saveAttendance(select) {
+      const data = {
+        action: 'updateAttendance',
+        rowIndex: parseInt(select.dataset.row),
+        columnIndex: parseInt(select.dataset.col),
+        value: select.value
+      };
+      
+      try {
+        const response = await fetch(GAS_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (result.status === 'ok') {
+          showIndicator('success', `Tersimpan: ${select.dataset.date}`);
+        } else {
+          throw new Error(result.message);
+        }
+      } catch (err) {
+        showIndicator('error', 'Gagal menyimpan!');
+        console.error(err);
+      }
+    }
+    
+    function showIndicator(type, message) {
+      const indicator = document.getElementById('saveIndicator');
+      indicator.textContent = message;
+      indicator.className = `save-indicator ${type} show`;
+      
+      setTimeout(() => {
+        indicator.classList.remove('show');
+      }, 2000);
+    }
+  </script>
 </body>
 </html>
