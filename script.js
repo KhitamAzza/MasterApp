@@ -457,29 +457,31 @@ async function printQrThermal() {
     commands.push(...encoder.encodeText(selectedStudent.kelas || '-'));
     commands.push(0x0A, 0x0A);
     
-    // ─── Native QR Code (ESC/POS GS ( k) ───────────────────────────────────
-    const qrData = encoder.encodeText(safeId);
-    const qrLen = qrData.length + 3;
-    const pL = qrLen & 0xFF;
-    const pH = (qrLen >> 8) & 0xFF;
-    
-    // Store QR data
-    commands.push(0x1D, 0x28, 0x6B, pL, pH, 0x31, 0x50, 0x30);
-    commands.push(...qrData);
-    
-    // Set QR model (1 = original, 2 = enhanced) — use 2 for better compatibility
-    commands.push(0x1D, 0x28, 0x6B, 0x04, 0x00, 0x31, 0x41, 0x32, 0x00);
-    
-    // Set QR size — 0x0A = size 10 (much bigger, ~4-5cm)
-    commands.push(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x43, 0x20);
-    
-    // Set error correction (H = 48 = high, 33% recovery) — 0x33 = H
-    commands.push(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x45, 0x33);
-    
-    // Print QR
-    commands.push(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x51, 0x30);
-    
-    commands.push(0x0A, 0x0A);
+   // ─── Native QR Code (FIXED ORDER + SIZE) ───────────────────────────────────
+
+// Encode data
+const qrData = encoder.encodeText(safeId);
+const qrLen = qrData.length + 3;
+const pL = qrLen & 0xFF;
+const pH = (qrLen >> 8) & 0xFF;
+
+// 1. Select model (use model 2 = better)
+commands.push(0x1D, 0x28, 0x6B, 0x04, 0x00, 0x31, 0x41, 0x32, 0x00);
+
+// 2. Set size (🔥 IMPORTANT: valid range 1–16)
+commands.push(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x43, 0x06); // ← use 6
+
+// 3. Set error correction (M = balanced, better for small printers)
+commands.push(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x45, 0x31); // 0x31 = M
+
+// 4. Store QR data
+commands.push(0x1D, 0x28, 0x6B, pL, pH, 0x31, 0x50, 0x30);
+commands.push(...qrData);
+
+// 5. Print QR
+commands.push(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x51, 0x30);
+
+commands.push(0x0A, 0x0A);
     
     // ID below QR
     commands.push(0x1B, 0x21, 0x10);
