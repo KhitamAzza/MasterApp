@@ -64,15 +64,14 @@ function openAppModal(appId) {
 function closeAppModal() {
   const studentModal = document.getElementById('studentModal');
   const appModal = document.getElementById('appModal');
-  
-  // If student detail modal is open, close it first (stay in QR app)
+
+  // If student detail modal is open, close it first (stay in app)
   if (studentModal?.classList.contains('show')) {
     studentModal.classList.remove('show');
-    // Push state back so phone back button still works for app modal
     history.pushState({ app: currentApp }, '', '#');
     return;
   }
-  
+
   // Otherwise close the whole app and return to main menu
   appModal.classList.remove('show');
   currentApp = null;
@@ -81,13 +80,13 @@ function closeAppModal() {
 function handlePopState(e) {
   const modal = document.getElementById('appModal');
   const studentModal = document.getElementById('studentModal');
-  
+
   if (studentModal?.classList.contains('show')) {
     studentModal.classList.remove('show');
     history.pushState({ app: currentApp }, '', '#');
     return;
   }
-  
+
   if (modal?.classList.contains('show')) {
     modal.classList.remove('show');
     currentApp = null;
@@ -293,13 +292,12 @@ function handleQrSearch(e) {
   if (!auto) return;
   auto.innerHTML = '';
   if (!query) { auto.classList.remove('show'); return; }
-  const matches = sumberStudents.filter(s => s.nama.toLowerCase().includes(query)).slice(0, 8);
+  const matches = sumberStudents.filter(s => s.nama && s.nama.toLowerCase().includes(query)).slice(0, 8);
   if (matches.length === 0) { auto.classList.remove('show'); return; }
-  matches.forEach((s, idx) => {
+  matches.forEach((s) => {
     const item = document.createElement('div');
     item.className = 'qr-autocomplete-item';
-    item.dataset.index = idx;
-    item.innerHTML = `<div class="name">${s.nama}</div><div class="meta">${s.kelas} · ID: ${s.id}</div>`;
+    item.innerHTML = `<div class="name">${s.nama || 'Tanpa Nama'}</div><div class="meta">${s.kelas || '-'} · ID: ${s.id || 'KOSONG'}</div>`;
     item.addEventListener('click', () => selectQrStudent(s));
     auto.appendChild(item);
   });
@@ -307,27 +305,37 @@ function handleQrSearch(e) {
 }
 
 function selectQrStudent(student) {
+  if (!student || !student.id) {
+    showIndicator('error', 'Data siswa tidak lengkap (ID kosong)');
+    console.error("Invalid student selected:", student);
+    return;
+  }
   selectedStudent = student;
   document.getElementById('qrAutocomplete').classList.remove('show');
-  document.getElementById('qrSearchInput').value = student.nama;
+  document.getElementById('qrSearchInput').value = student.nama || '';
   renderQrCard(student);
 }
 
 function renderQrCard(student) {
   const container = document.getElementById('qrResult');
   if (!container) return;
-  const qrUrl = `https://quickchart.io/qr?text=${encodeURIComponent(student.id)}&size=300&margin=2&dark=000000&light=ffffff`;
+  const safeId = String(student.id || "").trim();
+  if (!safeId) {
+    container.innerHTML = `<div class="loading" style="color:#f87171;">Error: ID siswa kosong</div>`;
+    return;
+  }
+  const qrUrl = `https://quickchart.io/qr?text=${encodeURIComponent(safeId)}&size=200&margin=2&dark=000000&light=ffffff`;
   const isConnected = bluetoothDevice !== null;
   container.innerHTML = `
     <div class="qr-card">
       <div class="qr-card-header">
-        <h2>${student.nama}</h2>
-        <div class="kelas">${student.kelas}</div>
+        <h2>${student.nama || 'Tanpa Nama'}</h2>
+        <div class="kelas">${student.kelas || '-'}</div>
       </div>
       <div class="qr-image-wrap">
-        <img src="${qrUrl}" alt="QR Code" id="qrImage">
+        <img src="${qrUrl}" alt="QR Code" id="qrImage" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22200%22%3E%3Crect width=%22200%22 height=%22200%22 fill=%22%23fff%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%23333%22 font-size=%2214%22%3EQR Error%3C/text%3E%3C/svg%3E'">
       </div>
-      <div class="qr-id-text">${student.id}</div>
+      <div class="qr-id-text">${safeId}</div>
       <button class="qr-connect-btn ${isConnected ? 'connected' : ''}" id="qrConnectBtn" onclick="connectBluetooth()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
           <path d="M6.5 6.5l11 11L12 23V1l5.5 5.5-11 11"/>
@@ -405,11 +413,19 @@ async function connectBluetooth() {
   }
 }
 
-// ─── ESC/POS Print QR ───────────────────────────────────────────────────────
+// ─── ESC/POS Print QR (Native QR Command) ───────────────────────────────────
 
 async function printQrThermal() {
-  if (!selectedStudent || !bluetoothCharacteristic) {
-    showIndicator('error', 'Pilih siswa dan hubungkan printer dulu');
+  if (!selectedStudent) {
+    showIndicator('error', 'Pilih siswa terlebih dahulu');
+    return;
+  }
+  if (!selectedStudent.id) {
+    showIndicator('error', 'ID siswa kosong, tidak bisa mencetak');
+    return;
+  }
+  if (!bluetoothCharacteristic) {
+    showIndicator('error', 'Hubungkan printer dulu');
     return;
   }
   
@@ -421,33 +437,58 @@ async function printQrThermal() {
     if (status) status.textContent = 'Mencetak...';
     
     const encoder = new EscPosEncoder();
-    const qrUrl = `https://quickchart.io/qr?text=${encodeURIComponent(selectedStudent.id)}&size=300&margin=2`;
-    
-    const imgRes = await fetch(qrUrl);
-    const imgBlob = await imgRes.blob();
-    const imgData = await blobToImageData(imgBlob);
+    const safeId = String(selectedStudent.id).trim();
     
     let commands = [];
+    
+    // Init printer
     commands.push(0x1B, 0x40);
+    
+    // Center align
     commands.push(0x1B, 0x61, 0x01);
+    
+    // Bold + double height + double width for name
     commands.push(0x1B, 0x21, 0x30);
-    commands.push(...encoder.encodeText(selectedStudent.nama));
+    commands.push(...encoder.encodeText(selectedStudent.nama || 'Siswa'));
     commands.push(0x0A);
+    
+    // Normal for class
     commands.push(0x1B, 0x21, 0x00);
-    commands.push(...encoder.encodeText(selectedStudent.kelas));
+    commands.push(...encoder.encodeText(selectedStudent.kelas || '-'));
     commands.push(0x0A, 0x0A);
     
-    const rasterCommands = await imageToEscPosRaster(imgData, 300);
-    commands.push(...rasterCommands);
+    // ─── Native QR Code (ESC/POS GS ( k) ───────────────────────────────────
+    const qrData = encoder.encodeText(safeId);
+    const qrLen = qrData.length + 3;
+    const pL = qrLen & 0xFF;
+    const pH = (qrLen >> 8) & 0xFF;
     
-    commands.push(0x0A);
+    // Store QR data
+    commands.push(0x1D, 0x28, 0x6B, pL, pH, 0x31, 0x50, 0x30);
+    commands.push(...qrData);
+    
+    // Set QR size (6 = ~3cm)
+    commands.push(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x43, 0x06);
+    
+    // Set error correction (M = 48)
+    commands.push(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x45, 0x30);
+    
+    // Print QR
+    commands.push(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x51, 0x30);
+    
+    commands.push(0x0A, 0x0A);
+    
+    // ID below QR
     commands.push(0x1B, 0x21, 0x10);
-    commands.push(...encoder.encodeText(selectedStudent.id));
+    commands.push(...encoder.encodeText(safeId));
     commands.push(0x0A, 0x0A);
+    
+    // Feed and cut
     commands.push(0x1B, 0x64, 0x03);
     commands.push(0x1D, 0x56, 0x00);
     
-    const chunkSize = 512;
+    // ─── Send in tiny chunks ────────────────────────────────────────────────
+    const chunkSize = 64;
     for (let i = 0; i < commands.length; i += chunkSize) {
       const chunk = new Uint8Array(commands.slice(i, i + chunkSize));
       if (bluetoothCharacteristic.properties.writeWithoutResponse) {
@@ -455,7 +496,7 @@ async function printQrThermal() {
       } else {
         await bluetoothCharacteristic.writeValueWithResponse(chunk);
       }
-      await new Promise(r => setTimeout(r, 20));
+      await new Promise(r => setTimeout(r, 50));
     }
     
     if (status) status.textContent = 'Selesai mencetak!';
@@ -477,62 +518,6 @@ class EscPosEncoder {
     const encoder = new TextEncoder();
     return Array.from(encoder.encode(text));
   }
-}
-
-function blobToImageData(blob) {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    const url = URL.createObjectURL(blob);
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      const size = 300;
-      canvas.width = size;
-      canvas.height = size;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0, size, size);
-      const data = ctx.getImageData(0, 0, size, size);
-      URL.revokeObjectURL(url);
-      resolve(data);
-    };
-    img.onerror = reject;
-    img.src = url;
-  });
-}
-
-async function imageToEscPosRaster(imageData, width) {
-  const data = imageData.data;
-  const height = imageData.height;
-  const lineHeight = 24;
-  const bytesPerLine = Math.ceil(width / 8);
-  const commands = [];
-  
-  for (let y = 0; y < height; y += lineHeight) {
-    const h = Math.min(lineHeight, height - y);
-    const raster = [];
-    
-    for (let row = 0; row < h; row++) {
-      for (let bx = 0; bx < bytesPerLine; bx++) {
-        let byte = 0;
-        for (let bit = 0; bit < 8; bit++) {
-          const x = bx * 8 + bit;
-          if (x >= width) continue;
-          const idx = ((y + row) * width + x) * 4;
-          const gray = (data[idx] + data[idx + 1] + data[idx + 2]) / 3;
-          if (gray < 128) byte |= (0x80 >> bit);
-        }
-        raster.push(byte);
-      }
-    }
-    
-    commands.push(0x1D, 0x76, 0x30, 0x00);
-    commands.push(bytesPerLine & 0xFF);
-    commands.push((bytesPerLine >> 8) & 0xFF);
-    commands.push(h & 0xFF);
-    commands.push((h >> 8) & 0xFF);
-    commands.push(...raster);
-  }
-  
-  return commands;
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
