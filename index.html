@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <!-- Main Menu (always visible when no modal open) -->
+  <!-- Main Menu -->
   <div class="main-menu" id="mainMenu">
     <div class="top-bar">
       <div class="top-bar-left">
@@ -21,7 +21,7 @@
     </div>
 
     <div class="app-grid" id="appGrid">
-      <!-- App: Master Admin -->
+      <!-- Master Admin -->
       <div class="app-icon" onclick="openAppModal('masterAdmin')">
         <div class="app-icon-visual master-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -34,7 +34,7 @@
         <span class="app-label">Master Admin</span>
       </div>
 
-      <!-- App: QR Printer -->
+      <!-- QR Printer -->
       <div class="app-icon" onclick="openAppModal('qrPrinter')">
         <div class="app-icon-visual qr-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -48,7 +48,7 @@
         <span class="app-label">Cetak QR</span>
       </div>
 
-      <!-- App: Statistik -->
+      <!-- Statistik -->
       <div class="app-icon" onclick="openAppModal('statistik')">
         <div class="app-icon-visual stats-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -74,7 +74,7 @@
     </button>
   </div>
 
-  <!-- Student Detail Modal (nested inside app) -->
+  <!-- Student Detail Modal (for Master Admin) -->
   <div id="studentModal" class="modal">
     <div class="modal-content" id="modalContent"></div>
   </div>
