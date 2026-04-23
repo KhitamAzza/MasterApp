@@ -3,6 +3,7 @@ const GAS_URL = 'https://script.google.com/macros/s/AKfycbzwgwoKQNXSWn7BrwlzZe1X
 let allStudents = [];
 let attendanceColumns = [];
 let dataLoaded = false;
+let currentApp = null;
 
 const STATUS_OPTIONS = [
   { value: '',          label: 'Kosong',    class: '' },
@@ -14,36 +15,155 @@ const STATUS_OPTIONS = [
   { value: 'PAGI',      label: 'PAGI',      class: 'status-hadir' }
 ];
 
+const APP_CONFIG = {
+  masterAdmin: {
+    title: 'Master Admin',
+    icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+      <polyline points="14 2 14 8 20 8"/>
+      <line x1="16" y1="13" x2="8" y2="13"/>
+      <line x1="16" y1="17" x2="8" y2="17"/>
+    </svg>`,
+    color: '#00d4ff'
+  },
+  qrPrinter: {
+    title: 'Cetak QR',
+    icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <rect x="3" y="3" width="7" height="7"/>
+      <rect x="14" y="3" width="7" height="7"/>
+      <rect x="3" y="14" width="7" height="7"/>
+      <path d="M14 14h7v7h-7z"/>
+      <path d="M14 17h4M17 14v7"/>
+    </svg>`,
+    color: '#ff6b35'
+  },
+  statistik: {
+    title: 'Statistik',
+    icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M3 3v18h18"/>
+      <path d="M18 17V9"/>
+      <path d="M13 17V5"/>
+      <path d="M8 17v-3"/>
+    </svg>`,
+    color: '#c084fc'
+  }
+};
+
+// ─── Init ───────────────────────────────────────────────────────────────────
+
 document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('studentModal').addEventListener('click', (e) => {
+  updateClock();
+  setInterval(updateClock, 1000);
+  
+  // Phone back button (popstate)
+  window.addEventListener('popstate', handlePopState);
+  
+  // Close student modal on backdrop click
+  document.getElementById('studentModal')?.addEventListener('click', (e) => {
     if (e.target.id === 'studentModal') {
       document.getElementById('studentModal').classList.remove('show');
     }
   });
-
-  document.getElementById('searchInput').addEventListener('input', handleSearch);
 });
 
-// ─── Toggle Section ───────────────────────────────────────────────────────────
+function updateClock() {
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+  const dateStr = now.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+  
+  const clockTime = document.getElementById('clockTime');
+  const clockDate = document.getElementById('clockDate');
+  
+  if (clockTime) clockTime.textContent = timeStr;
+  if (clockDate) clockDate.textContent = dateStr;
+}
 
-function toggleEditAbsensi() {
-  const section = document.getElementById('editAbsensiSection');
-  const btn = document.getElementById('btnEditAbsensi');
-  const isOpen = section.classList.contains('section-visible');
+// ─── Navigation ───────────────────────────────────────────────────────────────
 
-  if (isOpen) {
-    section.classList.remove('section-visible');
-    section.classList.add('section-hidden');
-    btn.classList.remove('active');
-  } else {
-    section.classList.remove('section-hidden');
-    section.classList.add('section-visible');
-    btn.classList.add('active');
-    if (!dataLoaded) loadData();
+function openAppModal(appId) {
+  currentApp = appId;
+  const modal = document.getElementById('appModal');
+  const content = document.getElementById('appModalContent');
+  
+  content.innerHTML = '';
+  modal.classList.add('show');
+  
+  // Push state so back button works
+  history.pushState({ app: appId }, '', '#');
+  
+  // Load app content
+  loadAppContent(appId, content);
+}
+
+function closeAppModal() {
+  const modal = document.getElementById('appModal');
+  modal.classList.remove('show');
+  currentApp = null;
+  
+  // Also close any nested student modal
+  document.getElementById('studentModal')?.classList.remove('show');
+}
+
+function handlePopState(e) {
+  // If modal is open, close it instead of going back in browser history
+  const modal = document.getElementById('appModal');
+  const studentModal = document.getElementById('studentModal');
+  
+  if (studentModal?.classList.contains('show')) {
+    studentModal.classList.remove('show');
+    // Push state again so next back closes app modal
+    history.pushState({ app: currentApp }, '', '#');
+    return;
+  }
+  
+  if (modal?.classList.contains('show')) {
+    modal.classList.remove('show');
+    currentApp = null;
   }
 }
 
-// ─── Data Loading ─────────────────────────────────────────────────────────────
+// ─── App Content Loaders ────────────────────────────────────────────────────
+
+function loadAppContent(appId, container) {
+  if (appId === 'masterAdmin') {
+    loadMasterAdmin(container);
+  } else if (appId === 'qrPrinter') {
+    loadQrPrinter(container);
+  } else if (appId === 'statistik') {
+    loadStatistik(container);
+  }
+}
+
+// ─── Master Admin App ─────────────────────────────────────────────────────────
+
+function loadMasterAdmin(container) {
+  container.innerHTML = `
+    <div class="container">
+      <h1>MASTER ADMIN</h1>
+      <div class="stats">
+        <div class="stat-box">
+          <div class="number" id="totalStudents">-</div>
+          <div class="label">Total Siswa</div>
+        </div>
+        <div class="stat-box">
+          <div class="number" id="totalDays">-</div>
+          <div class="label">Hari Tercatat</div>
+        </div>
+      </div>
+      <div class="search-box">
+        <input type="text" id="searchInput" placeholder="Cari nama siswa..." autocomplete="off">
+      </div>
+      <div class="loading" id="loading">Memuat data...</div>
+      <div class="no-results" id="noResults">Tidak ada siswa dengan nama tersebut</div>
+      <div id="studentContainer"></div>
+    </div>
+  `;
+  
+  const searchInput = container.querySelector('#searchInput');
+  searchInput.addEventListener('input', handleSearch);
+  
+  loadData();
+}
 
 async function loadData() {
   try {
@@ -61,28 +181,33 @@ async function loadData() {
       throw new Error('Format data tidak valid');
     }
 
-    document.getElementById('totalStudents').textContent = allStudents.length;
-    document.getElementById('totalDays').textContent = attendanceColumns.length;
-    document.getElementById('loading').style.display = 'none';
+    const totalStudents = document.getElementById('totalStudents');
+    const totalDays = document.getElementById('totalDays');
+    const loading = document.getElementById('loading');
+    
+    if (totalStudents) totalStudents.textContent = allStudents.length;
+    if (totalDays) totalDays.textContent = attendanceColumns.length;
+    if (loading) loading.style.display = 'none';
     dataLoaded = true;
 
   } catch (err) {
-    document.getElementById('loading').textContent = 'Error memuat data: ' + err.message;
+    const loading = document.getElementById('loading');
+    if (loading) loading.textContent = 'Error memuat data: ' + err.message;
     console.error(err);
   }
 }
-
-// ─── Search ───────────────────────────────────────────────────────────────────
 
 function handleSearch(e) {
   const query = e.target.value.trim().toLowerCase();
   const container = document.getElementById('studentContainer');
   const noResults = document.getElementById('noResults');
+  
+  if (!container) return;
 
   container.innerHTML = '';
 
   if (!query) {
-    noResults.style.display = 'none';
+    if (noResults) noResults.style.display = 'none';
     return;
   }
 
@@ -91,15 +216,13 @@ function handleSearch(e) {
     .slice(0, 5);
 
   if (matches.length === 0) {
-    noResults.style.display = 'block';
+    if (noResults) noResults.style.display = 'block';
     return;
   }
 
-  noResults.style.display = 'none';
+  if (noResults) noResults.style.display = 'none';
   matches.forEach(student => container.appendChild(createStudentItem(student)));
 }
-
-// ─── Student List Item ────────────────────────────────────────────────────────
 
 function createStudentItem(student) {
   const item = document.createElement('div');
@@ -112,17 +235,18 @@ function createStudentItem(student) {
   return item;
 }
 
-// ─── Student Modal ────────────────────────────────────────────────────────────
-
 function openStudentModal(student) {
+  // Push state so back button closes this modal first
+  history.pushState({ studentModal: true }, '', '#student');
+  
   const modal = document.getElementById('studentModal');
   const content = document.getElementById('modalContent');
+  if (!modal || !content) return;
+  
   content.innerHTML = '';
   content.appendChild(createStudentCard(student));
   modal.classList.add('show');
 }
-
-// ─── Student Card ─────────────────────────────────────────────────────────────
 
 function createStudentCard(student) {
   const card = document.createElement('div');
@@ -205,15 +329,11 @@ function createStudentCard(student) {
   return card;
 }
 
-// ─── Style Helper ─────────────────────────────────────────────────────────────
-
 function updateSelectStyle(select, value) {
   select.className = '';
   const option = STATUS_OPTIONS.find(o => o.value === value);
   if (option && option.class) select.classList.add(option.class);
 }
-
-// ─── Save Attendance ──────────────────────────────────────────────────────────
 
 async function saveAttendance(select) {
   const row = parseInt(select.dataset.row);
@@ -243,10 +363,46 @@ async function saveAttendance(select) {
   }
 }
 
+// ─── Placeholder Apps ─────────────────────────────────────────────────────────
+
+function loadQrPrinter(container) {
+  container.innerHTML = `
+    <div class="qr-placeholder">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <rect x="3" y="3" width="7" height="7" rx="1"/>
+        <rect x="14" y="3" width="7" height="7" rx="1"/>
+        <rect x="3" y="14" width="7" height="7" rx="1"/>
+        <rect x="14" y="14" width="7" height="7" rx="1"/>
+        <path d="M14 17h4M17 14v7"/>
+      </svg>
+      <h2>Cetak QR Code</h2>
+      <p>Fitur ini akan menghubungkan ke printer thermal Bluetooth untuk mencetak QR code dari data Google Spreadsheet.</p>
+      <p style="margin-top:8px; font-size:12px; color:#555;">(Coming Soon)</p>
+    </div>
+  `;
+}
+
+function loadStatistik(container) {
+  container.innerHTML = `
+    <div class="stats-placeholder">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M3 3v18h18"/>
+        <path d="M18 17V9"/>
+        <path d="M13 17V5"/>
+        <path d="M8 17v-3"/>
+      </svg>
+      <h2>Statistik</h2>
+      <p>Dashboard statistik absensi dan denda akan ditampilkan di sini.</p>
+      <p style="margin-top:8px; font-size:12px; color:#555;">(Coming Soon)</p>
+    </div>
+  `;
+}
+
 // ─── Toast Indicator ──────────────────────────────────────────────────────────
 
 function showIndicator(type, message) {
   const indicator = document.getElementById('saveIndicator');
+  if (!indicator) return;
   indicator.textContent = message;
   indicator.className = `save-indicator ${type} show`;
   setTimeout(() => indicator.classList.remove('show'), 2000);
