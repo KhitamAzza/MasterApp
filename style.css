@@ -1,562 +1,672 @@
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbzwgwoKQNXSWn7BrwlzZe1XmVlY0JnGgA6CKY7cjVUXols6Oo_7IyBIiuVDmoQh__wO/exec';
-
-let allStudents = [];
-let attendanceColumns = [];
-let dataLoaded = false;
-let currentApp = null;
-
-// QR Printer state
-let sumberStudents = [];
-let selectedStudent = null;
-let bluetoothDevice = null;
-let bluetoothServer = null;
-let bluetoothCharacteristic = null;
-
-const STATUS_OPTIONS = [
-  { value: '',          label: 'Kosong',    class: '' },
-  { value: 'HADIR',     label: 'HADIR',     class: 'status-hadir' },
-  { value: 'IZIN',      label: 'IZIN',      class: 'status-izin' },
-  { value: 'SAKIT',     label: 'SAKIT',     class: 'status-sakit' },
-  { value: 'ALPHA',     label: 'ALPHA',     class: 'status-alpha' },
-  { value: 'TERLAMBAT', label: 'TERLAMBAT', class: 'status-alpha' },
-  { value: 'PAGI',      label: 'PAGI',      class: 'status-hadir' }
-];
-
-const APP_CONFIG = {
-  masterAdmin: { title: 'Master Admin', color: '#00d4ff' },
-  qrPrinter:   { title: 'Cetak QR',     color: '#ff6b35' },
-  statistik:   { title: 'Statistik',    color: '#c084fc' }
-};
-
-// ─── Init ───────────────────────────────────────────────────────────────────
-
-document.addEventListener('DOMContentLoaded', () => {
-  updateClock();
-  setInterval(updateClock, 1000);
-  window.addEventListener('popstate', handlePopState);
-  document.getElementById('studentModal')?.addEventListener('click', (e) => {
-    if (e.target.id === 'studentModal') document.getElementById('studentModal').classList.remove('show');
-  });
-});
-
-function updateClock() {
-  const now = new Date();
-  const timeStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
-  const dateStr = now.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
-  const clockTime = document.getElementById('clockTime');
-  const clockDate = document.getElementById('clockDate');
-  if (clockTime) clockTime.textContent = timeStr;
-  if (clockDate) clockDate.textContent = dateStr;
+/* ─── Reset & Base ─────────────────────────────────────────────────────────── */
+* { 
+  box-sizing: border-box; 
+  margin: 0; 
+  padding: 0; 
+  -webkit-tap-highlight-color: transparent;
 }
 
-// ─── Navigation ─────────────────────────────────────────────────────────────
-
-function openAppModal(appId) {
-  currentApp = appId;
-  const modal = document.getElementById('appModal');
-  const content = document.getElementById('appModalContent');
-  content.innerHTML = '';
-  modal.classList.add('show');
-  history.pushState({ app: appId }, '', '#');
-  loadAppContent(appId, content);
+html, body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #0a0a0f;
+  color: #fff;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
 }
 
-function closeAppModal() {
-  const studentModal = document.getElementById('studentModal');
-  const appModal = document.getElementById('appModal');
-  
-  // If student detail modal is open, close it first (stay in QR app)
-  if (studentModal?.classList.contains('show')) {
-    studentModal.classList.remove('show');
-    // Push state back so phone back button still works for app modal
-    history.pushState({ app: currentApp }, '', '#');
-    return;
+/* ─── Main Menu ────────────────────────────────────────────────────────────── */
+.main-menu {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: 
+    radial-gradient(ellipse at 20% 30%, rgba(0, 212, 255, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 70%, rgba(123, 44, 191, 0.08) 0%, transparent 50%),
+    #0a0a0f;
+}
+
+/* ─── Top Bar ──────────────────────────────────────────────────────────────── */
+.top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: rgba(15, 15, 20, 0.85);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  flex-shrink: 0;
+  height: 52px;
+}
+
+.top-bar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.logo-icon {
+  font-size: 20px;
+  color: #00d4ff;
+}
+
+.logo-text {
+  font-size: 15px;
+  font-weight: 600;
+  background: linear-gradient(90deg, #00d4ff, #7b2cbf);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.top-bar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+  color: #888;
+}
+
+#clockTime {
+  font-weight: 600;
+  color: #ccc;
+}
+
+/* ─── App Grid ─────────────────────────────────────────────────────────────── */
+.app-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+  gap: 24px;
+  padding: 40px 24px;
+  overflow-y: auto;
+  flex: 1;
+  align-content: flex-start;
+  max-width: 500px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.app-icon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  padding: 16px 8px;
+  border-radius: 20px;
+  transition: all 0.2s ease;
+}
+
+.app-icon:active {
+  transform: scale(0.95);
+  background: rgba(255,255,255,0.05);
+}
+
+.app-icon-visual {
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  transition: all 0.2s;
+}
+
+.app-icon-visual svg {
+  width: 32px;
+  height: 32px;
+}
+
+.master-icon {
+  background: linear-gradient(135deg, #00d4ff22, #00d4ff44);
+  color: #00d4ff;
+  border: 1px solid #00d4ff33;
+}
+
+.qr-icon {
+  background: linear-gradient(135deg, #ff6b3522, #ff6b3544);
+  color: #ff6b35;
+  border: 1px solid #ff6b3533;
+}
+
+.stats-icon {
+  background: linear-gradient(135deg, #7b2cbf22, #7b2cbf44);
+  color: #c084fc;
+  border: 1px solid #7b2cbf33;
+}
+
+.app-label {
+  font-size: 13px;
+  color: #aaa;
+  text-align: center;
+  font-weight: 500;
+}
+
+/* ─── Mobile: Enlarged Icons ───────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .app-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 32px 24px;
+    padding: 48px 24px;
+    max-width: 100%;
   }
-  
-  // Otherwise close the whole app and return to main menu
-  appModal.classList.remove('show');
-  currentApp = null;
-}
 
-function handlePopState(e) {
-  const modal = document.getElementById('appModal');
-  const studentModal = document.getElementById('studentModal');
-  
-  if (studentModal?.classList.contains('show')) {
-    studentModal.classList.remove('show');
-    history.pushState({ app: currentApp }, '', '#');
-    return;
+  .app-icon {
+    gap: 14px;
+    padding: 24px 12px;
   }
-  
-  if (modal?.classList.contains('show')) {
-    modal.classList.remove('show');
-    currentApp = null;
+
+  .app-icon-visual {
+    width: 96px;
+    height: 96px;
+    border-radius: 24px;
   }
-}
 
-function loadAppContent(appId, container) {
-  if (appId === 'masterAdmin') loadMasterAdmin(container);
-  else if (appId === 'qrPrinter') loadQrPrinter(container);
-  else if (appId === 'statistik') loadStatistik(container);
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
-// MASTER ADMIN
-// ══════════════════════════════════════════════════════════════════════════════
-
-function loadMasterAdmin(container) {
-  container.innerHTML = `
-    <div class="container">
-      <h1>MASTER ADMIN</h1>
-      <div class="stats">
-        <div class="stat-box"><div class="number" id="totalStudents">-</div><div class="label">Total Siswa</div></div>
-        <div class="stat-box"><div class="number" id="totalDays">-</div><div class="label">Hari Tercatat</div></div>
-      </div>
-      <div class="search-box"><input type="text" id="searchInput" placeholder="Cari nama siswa..." autocomplete="off"></div>
-      <div class="loading" id="loading">Memuat data...</div>
-      <div class="no-results" id="noResults">Tidak ada siswa dengan nama tersebut</div>
-      <div id="studentContainer"></div>
-    </div>`;
-  container.querySelector('#searchInput').addEventListener('input', handleSearch);
-  loadData();
-}
-
-async function loadData() {
-  try {
-    const res = await fetch(`${GAS_URL}?action=masterData`);
-    const result = await res.json();
-    if (result && result.students) {
-      allStudents = result.students;
-      attendanceColumns = result.columns || [];
-    } else if (Array.isArray(result) && result.length > 0) {
-      allStudents = result;
-      attendanceColumns = result[0].absenColumns || [];
-    } else throw new Error('Format data tidak valid');
-    const ts = document.getElementById('totalStudents');
-    const td = document.getElementById('totalDays');
-    const ld = document.getElementById('loading');
-    if (ts) ts.textContent = allStudents.length;
-    if (td) td.textContent = attendanceColumns.length;
-    if (ld) ld.style.display = 'none';
-    dataLoaded = true;
-  } catch (err) {
-    const ld = document.getElementById('loading');
-    if (ld) ld.textContent = 'Error memuat data: ' + err.message;
-    console.error(err);
+  .app-icon-visual svg {
+    width: 48px;
+    height: 48px;
   }
-}
 
-function handleSearch(e) {
-  const query = e.target.value.trim().toLowerCase();
-  const container = document.getElementById('studentContainer');
-  const noResults = document.getElementById('noResults');
-  if (!container) return;
-  container.innerHTML = '';
-  if (!query) { if (noResults) noResults.style.display = 'none'; return; }
-  const matches = allStudents.filter(s => s.nama.toLowerCase().includes(query)).slice(0, 5);
-  if (matches.length === 0) { if (noResults) noResults.style.display = 'block'; return; }
-  if (noResults) noResults.style.display = 'none';
-  matches.forEach(s => container.appendChild(createStudentItem(s)));
-}
-
-function createStudentItem(student) {
-  const item = document.createElement('div');
-  item.className = 'student-item';
-  item.innerHTML = `<strong>${student.nama}</strong><span style="color:#888;font-size:13px;margin-left:10px;">${student.kelas} · ${student.ekstra}</span>`;
-  item.addEventListener('click', () => openStudentModal(student));
-  return item;
-}
-
-function openStudentModal(student) {
-  history.pushState({ studentModal: true }, '', '#student');
-  const modal = document.getElementById('studentModal');
-  const content = document.getElementById('modalContent');
-  if (!modal || !content) return;
-  content.innerHTML = '';
-  content.appendChild(createStudentCard(student));
-  modal.classList.add('show');
-}
-
-function createStudentCard(student) {
-  const card = document.createElement('div');
-  card.className = 'student-card active';
-  const info = document.createElement('div');
-  info.className = 'student-info';
-  info.innerHTML = `
-    <div class="info-item"><label>ID</label><div class="value id">${student.id || '-'}</div></div>
-    <div class="info-item"><label>Nama</label><div class="value nama">${student.nama}</div></div>
-    <div class="info-item"><label>Kelas</label><div class="value kelas">${student.kelas || '-'}</div></div>
-    <div class="info-item"><label>Ekstra</label><div class="value ekstra">${student.ekstra || '-'}</div></div>
-    <div class="info-item"><label>Denda</label><div class="value">Rp ${Number(student.denda || 0).toLocaleString('id-ID')}</div></div>
-    <div class="info-item"><label>Status</label><div class="value">${student.status || '-'}</div></div>`;
-  const attSection = document.createElement('div');
-  attSection.className = 'attendance-section';
-  attSection.innerHTML = '<h3>Edit Absensi Harian</h3>';
-  const grid = document.createElement('div');
-  grid.className = 'attendance-grid';
-  attendanceColumns.forEach((col, idx) => {
-    const currentValue = (student.absensi[idx] || '').toUpperCase();
-    const item = document.createElement('div');
-    item.className = 'attendance-item';
-    const label = document.createElement('label');
-    label.textContent = col.header;
-    const select = document.createElement('select');
-    select.dataset.row = student.rowIndex;
-    select.dataset.col = col.col + 1;
-    select.dataset.date = col.header;
-    STATUS_OPTIONS.forEach(opt => {
-      const option = document.createElement('option');
-      option.value = opt.value;
-      option.textContent = opt.label;
-      if (opt.value === currentValue) option.selected = true;
-      select.appendChild(option);
-    });
-    updateSelectStyle(select, currentValue);
-    select.addEventListener('change', (e) => { updateSelectStyle(e.target, e.target.value); saveAttendance(e.target); });
-    item.appendChild(label);
-    item.appendChild(select);
-    grid.appendChild(item);
-  });
-  attSection.appendChild(grid);
-  card.appendChild(info);
-  card.appendChild(attSection);
-  return card;
-}
-
-function updateSelectStyle(select, value) {
-  select.className = '';
-  const option = STATUS_OPTIONS.find(o => o.value === value);
-  if (option && option.class) select.classList.add(option.class);
-}
-
-async function saveAttendance(select) {
-  const row = parseInt(select.dataset.row);
-  const col = parseInt(select.dataset.col);
-  const value = select.value;
-  const date = select.dataset.date;
-  if (!row || !col) { showIndicator('error', 'Data baris/kolom tidak valid!'); return; }
-  try {
-    const res = await fetch(`${GAS_URL}?action=updateAttendance&rowIndex=${row}&columnIndex=${col}&value=${encodeURIComponent(value)}`);
-    const result = await res.json();
-    if (result.status === 'ok') showIndicator('success', `Tersimpan: ${date}`);
-    else throw new Error(result.message || 'Unknown error');
-  } catch (err) {
-    showIndicator('error', 'Gagal menyimpan!');
-    console.error('saveAttendance error:', err);
+  .app-label {
+    font-size: 15px;
+    font-weight: 600;
   }
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// QR PRINTER
-// ══════════════════════════════════════════════════════════════════════════════
-
-function loadQrPrinter(container) {
-  container.innerHTML = `
-    <div class="container">
-      <h1>CETAK QR CODE</h1>
-      <div class="qr-search-container">
-        <div class="search-box">
-          <input type="text" id="qrSearchInput" placeholder="Cari nama siswa..." autocomplete="off">
-        </div>
-        <div class="qr-autocomplete" id="qrAutocomplete"></div>
-      </div>
-      <div class="loading" id="qrLoading">Memuat data siswa...</div>
-      <div id="qrResult"></div>
-    </div>`;
-  container.querySelector('#qrSearchInput').addEventListener('input', handleQrSearch);
-  loadSumberData();
+/* ─── App Modal (Full Screen Overlay) ──────────────────────────────────────── */
+.app-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #0f0f14;
+  z-index: 200;
+  display: none;
+  flex-direction: column;
 }
 
-async function loadSumberData() {
-  try {
-    const res = await fetch(`${GAS_URL}?action=getSumberStudents`);
-    const result = await res.json();
-    if (Array.isArray(result)) {
-      sumberStudents = result;
-    } else if (result && result.students) {
-      sumberStudents = result.students;
-    } else {
-      throw new Error('Format data tidak valid');
-    }
-    const ld = document.getElementById('qrLoading');
-    if (ld) ld.style.display = 'none';
-  } catch (err) {
-    const ld = document.getElementById('qrLoading');
-    if (ld) ld.textContent = 'Error: ' + err.message;
-    console.error(err);
-  }
+.app-modal.show {
+  display: flex;
+  animation: slideUp 0.25s ease;
 }
 
-function handleQrSearch(e) {
-  const query = e.target.value.trim().toLowerCase();
-  const auto = document.getElementById('qrAutocomplete');
-  if (!auto) return;
-  auto.innerHTML = '';
-  if (!query) { auto.classList.remove('show'); return; }
-  const matches = sumberStudents.filter(s => s.nama.toLowerCase().includes(query)).slice(0, 8);
-  if (matches.length === 0) { auto.classList.remove('show'); return; }
-  matches.forEach((s, idx) => {
-    const item = document.createElement('div');
-    item.className = 'qr-autocomplete-item';
-    item.dataset.index = idx;
-    item.innerHTML = `<div class="name">${s.nama}</div><div class="meta">${s.kelas} · ID: ${s.id}</div>`;
-    item.addEventListener('click', () => selectQrStudent(s));
-    auto.appendChild(item);
-  });
-  auto.classList.add('show');
+@keyframes slideUp {
+  from { transform: translateY(100%); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
 }
 
-function selectQrStudent(student) {
-  selectedStudent = student;
-  document.getElementById('qrAutocomplete').classList.remove('show');
-  document.getElementById('qrSearchInput').value = student.nama;
-  renderQrCard(student);
+.app-modal-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  padding-bottom: 80px;
+  -webkit-overflow-scrolling: touch;
 }
 
-function renderQrCard(student) {
-  const container = document.getElementById('qrResult');
-  if (!container) return;
-  const qrUrl = `https://quickchart.io/qr?text=${encodeURIComponent(student.id)}&size=300&margin=2&dark=000000&light=ffffff`;
-  const isConnected = bluetoothDevice !== null;
-  container.innerHTML = `
-    <div class="qr-card">
-      <div class="qr-card-header">
-        <h2>${student.nama}</h2>
-        <div class="kelas">${student.kelas}</div>
-      </div>
-      <div class="qr-image-wrap">
-        <img src="${qrUrl}" alt="QR Code" id="qrImage">
-      </div>
-      <div class="qr-id-text">${student.id}</div>
-      <button class="qr-connect-btn ${isConnected ? 'connected' : ''}" id="qrConnectBtn" onclick="connectBluetooth()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
-          <path d="M6.5 6.5l11 11L12 23V1l5.5 5.5-11 11"/>
-        </svg>
-        <span>${isConnected ? 'Printer Terhubung' : 'Hubungkan Printer'}</span>
-      </button>
-      <br>
-      <button class="qr-print-btn" id="qrPrintBtn" onclick="printQrThermal()" ${!isConnected ? 'disabled' : ''}>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="6 9 6 2 18 2 18 9"/>
-          <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
-          <rect x="6" y="14" width="12" height="8"/>
-        </svg>
-        <span>Cetak QR</span>
-      </button>
-      <div class="qr-status" id="qrStatus">${isConnected ? 'Siap mencetak' : 'Hubungkan printer Bluetooth terlebih dahulu'}</div>
-    </div>`;
+.app-modal-content::-webkit-scrollbar {
+  width: 6px;
 }
 
-// ─── Bluetooth Connection ───────────────────────────────────────────────────
-
-async function connectBluetooth() {
-  const status = document.getElementById('qrStatus');
-  const connectBtn = document.getElementById('qrConnectBtn');
-  const printBtn = document.getElementById('qrPrintBtn');
-  
-  try {
-    if (status) status.textContent = 'Mencari printer...';
-    
-    bluetoothDevice = await navigator.bluetooth.requestDevice({
-      acceptAllDevices: true,
-      optionalServices: [
-        '000018f0-0000-1000-8000-00805f9b34fb',
-        '0000ff00-0000-1000-8000-00805f9b34fb',
-        'e7810a71-73ae-499d-8c15-faa9aef0c3f2',
-        '49535343-fe7d-4ae5-8fa9-9fafd205e455',
-        '0000fee7-0000-1000-8000-00805f9b34fb'
-      ]
-    });
-    
-    if (status) status.textContent = 'Menghubungkan...';
-    bluetoothServer = await bluetoothDevice.gatt.connect();
-    
-    const services = await bluetoothServer.getPrimaryServices();
-    let targetChar = null;
-    
-    for (const service of services) {
-      const chars = await service.getCharacteristics();
-      for (const char of chars) {
-        if (char.properties.write || char.properties.writeWithoutResponse) {
-          targetChar = char;
-          break;
-        }
-      }
-      if (targetChar) break;
-    }
-    
-    if (!targetChar) throw new Error('Printer tidak mendukung write characteristic');
-    
-    bluetoothCharacteristic = targetChar;
-    
-    if (connectBtn) {
-      connectBtn.classList.add('connected');
-      connectBtn.querySelector('span').textContent = 'Printer Terhubung';
-    }
-    if (printBtn) printBtn.disabled = false;
-    if (status) status.textContent = `Terhubung: ${bluetoothDevice.name || 'Unknown'}`;
-    
-    showIndicator('success', 'Printer terhubung!');
-    
-  } catch (err) {
-    console.error('Bluetooth error:', err);
-    if (status) status.textContent = 'Gagal: ' + err.message;
-    showIndicator('error', 'Gagal menghubungkan printer');
-  }
+.app-modal-content::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 3px;
 }
 
-// ─── ESC/POS Print QR ───────────────────────────────────────────────────────
-
-async function printQrThermal() {
-  if (!selectedStudent || !bluetoothCharacteristic) {
-    showIndicator('error', 'Pilih siswa dan hubungkan printer dulu');
-    return;
-  }
-  
-  const status = document.getElementById('qrStatus');
-  const printBtn = document.getElementById('qrPrintBtn');
-  
-  try {
-    if (printBtn) printBtn.disabled = true;
-    if (status) status.textContent = 'Mencetak...';
-    
-    const encoder = new EscPosEncoder();
-    const qrUrl = `https://quickchart.io/qr?text=${encodeURIComponent(selectedStudent.id)}&size=300&margin=2`;
-    
-    const imgRes = await fetch(qrUrl);
-    const imgBlob = await imgRes.blob();
-    const imgData = await blobToImageData(imgBlob);
-    
-    let commands = [];
-    commands.push(0x1B, 0x40);
-    commands.push(0x1B, 0x61, 0x01);
-    commands.push(0x1B, 0x21, 0x30);
-    commands.push(...encoder.encodeText(selectedStudent.nama));
-    commands.push(0x0A);
-    commands.push(0x1B, 0x21, 0x00);
-    commands.push(...encoder.encodeText(selectedStudent.kelas));
-    commands.push(0x0A, 0x0A);
-    
-    const rasterCommands = await imageToEscPosRaster(imgData, 300);
-    commands.push(...rasterCommands);
-    
-    commands.push(0x0A);
-    commands.push(0x1B, 0x21, 0x10);
-    commands.push(...encoder.encodeText(selectedStudent.id));
-    commands.push(0x0A, 0x0A);
-    commands.push(0x1B, 0x64, 0x03);
-    commands.push(0x1D, 0x56, 0x00);
-    
-    const chunkSize = 512;
-    for (let i = 0; i < commands.length; i += chunkSize) {
-      const chunk = new Uint8Array(commands.slice(i, i + chunkSize));
-      if (bluetoothCharacteristic.properties.writeWithoutResponse) {
-        await bluetoothCharacteristic.writeValueWithoutResponse(chunk);
-      } else {
-        await bluetoothCharacteristic.writeValueWithResponse(chunk);
-      }
-      await new Promise(r => setTimeout(r, 20));
-    }
-    
-    if (status) status.textContent = 'Selesai mencetak!';
-    showIndicator('success', 'QR berhasil dicetak!');
-    
-  } catch (err) {
-    console.error('Print error:', err);
-    if (status) status.textContent = 'Gagal mencetak: ' + err.message;
-    showIndicator('error', 'Gagal mencetak');
-  } finally {
-    if (printBtn) printBtn.disabled = false;
-  }
+/* ─── Back Button ──────────────────────────────────────────────────────────── */
+.back-btn {
+  position: fixed;
+  bottom: 16px;
+  left: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(30, 30, 40, 0.95);
+  backdrop-filter: blur(10px);
+  color: #aaa;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  z-index: 210;
+  transition: all 0.2s;
 }
 
-// ─── ESC/POS Helpers ──────────────────────────────────────────────────────────
-
-class EscPosEncoder {
-  encodeText(text) {
-    const encoder = new TextEncoder();
-    return Array.from(encoder.encode(text));
-  }
+.back-btn:hover, .back-btn:active {
+  background: rgba(50, 50, 60, 0.95);
+  color: #fff;
+  border-color: rgba(255,255,255,0.2);
 }
 
-function blobToImageData(blob) {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    const url = URL.createObjectURL(blob);
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      const size = 300;
-      canvas.width = size;
-      canvas.height = size;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0, size, size);
-      const data = ctx.getImageData(0, 0, size, size);
-      URL.revokeObjectURL(url);
-      resolve(data);
-    };
-    img.onerror = reject;
-    img.src = url;
-  });
+.back-btn svg {
+  width: 18px;
+  height: 18px;
 }
 
-async function imageToEscPosRaster(imageData, width) {
-  const data = imageData.data;
-  const height = imageData.height;
-  const lineHeight = 24;
-  const bytesPerLine = Math.ceil(width / 8);
-  const commands = [];
-  
-  for (let y = 0; y < height; y += lineHeight) {
-    const h = Math.min(lineHeight, height - y);
-    const raster = [];
-    
-    for (let row = 0; row < h; row++) {
-      for (let bx = 0; bx < bytesPerLine; bx++) {
-        let byte = 0;
-        for (let bit = 0; bit < 8; bit++) {
-          const x = bx * 8 + bit;
-          if (x >= width) continue;
-          const idx = ((y + row) * width + x) * 4;
-          const gray = (data[idx] + data[idx + 1] + data[idx + 2]) / 3;
-          if (gray < 128) byte |= (0x80 >> bit);
-        }
-        raster.push(byte);
-      }
-    }
-    
-    commands.push(0x1D, 0x76, 0x30, 0x00);
-    commands.push(bytesPerLine & 0xFF);
-    commands.push((bytesPerLine >> 8) & 0xFF);
-    commands.push(h & 0xFF);
-    commands.push((h >> 8) & 0xFF);
-    commands.push(...raster);
-  }
-  
-  return commands;
+/* ─── Master Admin Styles ────────────────────────────────────────────────── */
+.container { max-width: 100%; margin: 0 auto; }
+
+h1 { 
+  text-align: center; 
+  margin-bottom: 24px;
+  font-size: 20px;
+  background: linear-gradient(90deg, #00d4ff, #7b2cbf);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// STATISTIK PLACEHOLDER
-// ══════════════════════════════════════════════════════════════════════════════
-
-function loadStatistik(container) {
-  container.innerHTML = `
-    <div class="stats-placeholder">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-        <path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/>
-      </svg>
-      <h2>Statistik</h2>
-      <p>Dashboard statistik absensi dan denda akan ditampilkan di sini.</p>
-      <p style="margin-top:8px;font-size:12px;color:#555;">(Coming Soon)</p>
-    </div>`;
+.search-box {
+  background: #1a1a1a;
+  padding: 16px;
+  border-radius: 12px;
+  margin-bottom: 16px;
+  border: 1px solid #333;
 }
 
-// ─── Toast Indicator ────────────────────────────────────────────────────────
+.search-box input {
+  width: 100%;
+  padding: 12px 16px;
+  font-size: 16px;
+  border: none;
+  border-radius: 10px;
+  background: #0f0f0f;
+  color: #fff;
+  outline: none;
+}
 
-function showIndicator(type, message) {
-  const indicator = document.getElementById('saveIndicator');
-  if (!indicator) return;
-  indicator.textContent = message;
-  indicator.className = `save-indicator ${type} show`;
-  setTimeout(() => indicator.classList.remove('show'), 2000);
+.search-box input::placeholder { color: #666; }
+
+.student-card {
+  background: #1a1a1a;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+  border: 1px solid #333;
+}
+
+.student-info {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #333;
+}
+
+.info-item label {
+  color: #888;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.info-item .value {
+  font-size: 16px;
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+.info-item .value.id { color: #00d4ff; }
+.info-item .value.nama { color: #fff; font-size: 20px; }
+.info-item .value.kelas { color: #7b2cbf; }
+.info-item .value.ekstra { color: #ff6b35; }
+
+.attendance-section h3 {
+  margin-bottom: 12px;
+  color: #00d4ff;
+  font-size: 14px;
+}
+
+.attendance-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 8px;
+}
+
+.attendance-item {
+  background: #0f0f0f;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid #333;
+  transition: all 0.3s;
+}
+
+.attendance-item:hover { border-color: #00d4ff; }
+
+.attendance-item label {
+  display: block;
+  color: #888;
+  font-size: 10px;
+  margin-bottom: 6px;
+}
+
+.attendance-item select {
+  width: 100%;
+  padding: 8px;
+  border: none;
+  border-radius: 6px;
+  background: #1a1a1a;
+  color: #fff;
+  font-size: 13px;
+  cursor: pointer;
+  outline: none;
+}
+
+.attendance-item select:focus { background: #252525; }
+
+.status-hadir { background: #1a4d2e !important; color: #4ade80 !important; }
+.status-izin { background: #713f12 !important; color: #fbbf24 !important; }
+.status-sakit { background: #1e3a8a !important; color: #60a5fa !important; }
+.status-alpha { background: #7f1d1d !important; color: #f87171 !important; }
+
+.save-indicator {
+  position: fixed;
+  top: 60px;
+  right: 20px;
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 13px;
+  transform: translateX(150%);
+  transition: transform 0.3s;
+  z-index: 1000;
+}
+
+.save-indicator.show { transform: translateX(0); }
+.save-indicator.success { background: #1a4d2e; color: #4ade80; }
+.save-indicator.error { background: #7f1d1d; color: #f87171; }
+
+.loading {
+  text-align: center;
+  padding: 32px;
+  color: #666;
+  font-size: 14px;
+}
+
+.loading::after {
+  content: '';
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid #00d4ff;
+  border-top-color: transparent;
+  border-radius: 50%;
+  margin-left: 8px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.no-results {
+  text-align: center;
+  padding: 32px;
+  color: #666;
+  display: none;
+  font-size: 14px;
+}
+
+.stats {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.stat-box {
+  background: #1a1a1a;
+  padding: 12px 20px;
+  border-radius: 10px;
+  border: 1px solid #333;
+  flex: 1;
+  min-width: 120px;
+}
+
+.stat-box .number {
+  font-size: 24px;
+  font-weight: 700;
+  color: #00d4ff;
+}
+
+.stat-box .label {
+  color: #666;
+  font-size: 11px;
+}
+
+.student-item {
+  background: #1a1a1a;
+  padding: 14px;
+  margin-bottom: 8px;
+  border-radius: 10px;
+  cursor: pointer;
+  border: 1px solid #333;
+  transition: all 0.2s;
+}
+
+.student-item:hover {
+  border-color: #00d4ff;
+  background: #1f1f2e;
+}
+
+/* Modal */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.7);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+}
+
+.modal.show {
+  display: flex;
+}
+
+.modal-content {
+  background: #1a1a1a;
+  padding: 20px;
+  border-radius: 16px;
+  max-width: 900px;
+  width: 95%;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+/* ─── QR Printer Styles ────────────────────────────────────────────────────── */
+.qr-search-container {
+  position: relative;
+  margin-bottom: 16px;
+}
+
+.qr-search-container .search-box {
+  margin-bottom: 0;
+}
+
+.qr-autocomplete {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-top: none;
+  border-radius: 0 0 12px 12px;
+  max-height: 250px;
+  overflow-y: auto;
+  z-index: 50;
+  display: none;
+}
+
+.qr-autocomplete.show {
+  display: block;
+}
+
+.qr-autocomplete-item {
+  padding: 14px 16px;
+  cursor: pointer;
+  border-bottom: 1px solid #222;
+  transition: background 0.15s;
+}
+
+.qr-autocomplete-item:hover,
+.qr-autocomplete-item.active {
+  background: #252530;
+}
+
+.qr-autocomplete-item .name {
+  font-weight: 600;
+  font-size: 15px;
+  color: #fff;
+}
+
+.qr-autocomplete-item .meta {
+  font-size: 12px;
+  color: #888;
+  margin-top: 2px;
+}
+
+.qr-card {
+  background: #1a1a1a;
+  border-radius: 16px;
+  padding: 24px;
+  border: 1px solid #333;
+  text-align: center;
+}
+
+.qr-card-header {
+  margin-bottom: 20px;
+}
+
+.qr-card-header h2 {
+  font-size: 22px;
+  color: #fff;
+  margin-bottom: 4px;
+}
+
+.qr-card-header .kelas {
+  font-size: 14px;
+  color: #888;
+}
+
+.qr-image-wrap {
+  background: #fff;
+  border-radius: 12px;
+  padding: 16px;
+  display: inline-block;
+  margin-bottom: 20px;
+}
+
+.qr-image-wrap img {
+  width: 200px;
+  height: 200px;
+  display: block;
+}
+
+.qr-id-text {
+  font-family: monospace;
+  font-size: 18px;
+  color: #00d4ff;
+  background: #0f0f0f;
+  padding: 8px 16px;
+  border-radius: 8px;
+  display: inline-block;
+  margin-bottom: 20px;
+  letter-spacing: 1px;
+}
+
+.qr-print-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 32px;
+  border-radius: 12px;
+  border: none;
+  background: linear-gradient(135deg, #ff6b35, #ff8c42);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.qr-print-btn:hover, .qr-print-btn:active {
+  transform: scale(1.02);
+  box-shadow: 0 4px 20px rgba(255, 107, 53, 0.3);
+}
+
+.qr-print-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.qr-print-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+.qr-connect-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border-radius: 10px;
+  border: 1px solid #333;
+  background: #1a1a1a;
+  color: #aaa;
+  font-size: 14px;
+  cursor: pointer;
+  margin-bottom: 16px;
+  transition: all 0.2s;
+}
+
+.qr-connect-btn:hover {
+  border-color: #00d4ff;
+  color: #00d4ff;
+}
+
+.qr-connect-btn.connected {
+  border-color: #4ade80;
+  color: #4ade80;
+}
+
+.qr-status {
+  font-size: 12px;
+  color: #666;
+  margin-top: 12px;
+}
+
+/* Placeholders */
+.stats-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  gap: 16px;
+  color: #666;
+  text-align: center;
+  padding: 40px;
+}
+
+.stats-placeholder svg {
+  width: 64px;
+  height: 64px;
+  opacity: 0.3;
+}
+
+.stats-placeholder h2 {
+  font-size: 18px;
+  color: #888;
+}
+
+.stats-placeholder p {
+  font-size: 13px;
+  max-width: 300px;
 }
