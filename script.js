@@ -34,6 +34,14 @@ const APP_CONFIG = {
   statistik:   { title: 'Statistik',    color: '#c084fc' }
 };
 
+// ─── ESC/POS Helpers ──────────────────────────────────────────────────────────
+class EscPosEncoder {
+  encodeText(text) {
+    const encoder = new TextEncoder();
+    return Array.from(encoder.encode(text));
+  }
+}
+
 // ─── Init ───────────────────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -411,12 +419,12 @@ async function connectBluetooth() {
     }
     if (printBtn) printBtn.disabled = false;
     
-    // Kode Khusus buttons ← ADD THIS BLOCK
+    // Kode Khusus buttons
     const kodeConnectBtn = document.getElementById('kodeConnectBtn');
     const kodePrintBtn = document.getElementById('kodePrintBtn');
     if (kodeConnectBtn) {
       kodeConnectBtn.classList.add('connected');
-      kodePrintBtn.querySelector('span').textContent = 'Printer Terhubung';
+      kodeConnectBtn.querySelector('span').textContent = 'Printer Terhubung';
     }
     if (kodePrintBtn) kodePrintBtn.disabled = false;
     
@@ -478,14 +486,8 @@ async function buildQrBitmapCommands(text) {
   commands.push(...bitmap);
   return commands;
 }
-// ─── ESC/POS Helpers ──────────────────────────────────────────────────────────
-class EscPosEncoder {
-  encodeText(text) {
-    const encoder = new TextEncoder();
-    return Array.from(encoder.encode(text));
-  }
-}
-// ─── printQrThermal (full replacement) ───────────────────────────────────────
+
+// ─── printQrThermal ───────────────────────────────────────────────────────────
 
 async function printQrThermal() {
   if (!selectedStudent) {
@@ -766,7 +768,7 @@ function renderKodeActionButtons() {
   const container = document.getElementById('kodeActionButtons');
   if (!container) return;
 
-    if (kodeGeneratedCodes.length === 2) {
+  if (kodeGeneratedCodes.length === 2) {
     const isConnected = bluetoothCharacteristic !== null;
     container.innerHTML = `
       <button class="qr-connect-btn ${isConnected ? 'connected' : ''}" id="kodeConnectBtn" onclick="connectBluetooth()" style="margin-bottom:12px;width:100%;justify-content:center;">
@@ -820,7 +822,7 @@ async function printKodeThermal() {
     showIndicator('error', 'Generate kode terlebih dahulu');
     return;
   }
-if (!bluetoothCharacteristic) {   // ← ADD THIS BLOCK
+  if (!bluetoothCharacteristic) {
     showIndicator('error', 'Hubungkan printer dulu');
     return;
   }
@@ -829,11 +831,11 @@ if (!bluetoothCharacteristic) {   // ← ADD THIS BLOCK
   try {
     if (printBtn) printBtn.disabled = true;
 
-    // Save to sheet first — FIX: action goes in body, not URL
+    // Save to sheet first
     const res = await fetch(GAS_URL, {
       method: 'POST',
       body: JSON.stringify({
-        action: 'saveKodeKhusus',  // ← action goes here
+        action: 'saveKodeKhusus',
         idSiswa: kodeSelectedStudent.id,
         nama: kodeSelectedStudent.nama,
         kelas: kodeSelectedStudent.kelas || '',
@@ -861,11 +863,8 @@ if (!bluetoothCharacteristic) {   // ← ADD THIS BLOCK
     if (printBtn) printBtn.disabled = false;
   }
 }
-async function sendKodeToPrinter() {
-  //if (!bluetoothCharacteristic) {
-    //throw new Error('Printer belum terhubung');
-  //}
 
+async function sendKodeToPrinter() {
   const encoder = new EscPosEncoder();
   let commands = [];
 
@@ -921,4 +920,3 @@ function showIndicator(type, message) {
   indicator.className = `save-indicator ${type} show`;
   setTimeout(() => indicator.classList.remove('show'), 2000);
 }
-
