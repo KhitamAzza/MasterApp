@@ -478,7 +478,13 @@ async function buildQrBitmapCommands(text) {
   commands.push(...bitmap);
   return commands;
 }
-
+// ─── ESC/POS Helpers ──────────────────────────────────────────────────────────
+class EscPosEncoder {
+  encodeText(text) {
+    const encoder = new TextEncoder();
+    return Array.from(encoder.encode(text));
+  }
+}
 // ─── printQrThermal (full replacement) ───────────────────────────────────────
 
 async function printQrThermal() {
