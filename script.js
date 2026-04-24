@@ -404,11 +404,22 @@ async function connectBluetooth() {
     
     bluetoothCharacteristic = targetChar;
     
+    // QR Printer buttons
     if (connectBtn) {
       connectBtn.classList.add('connected');
       connectBtn.querySelector('span').textContent = 'Printer Terhubung';
     }
     if (printBtn) printBtn.disabled = false;
+    
+    // Kode Khusus buttons ← ADD THIS BLOCK
+    const kodeConnectBtn = document.getElementById('kodeConnectBtn');
+    const kodePrintBtn = document.getElementById('kodePrintBtn');
+    if (kodeConnectBtn) {
+      kodeConnectBtn.classList.add('connected');
+      kodePrintBtn.querySelector('span').textContent = 'Printer Terhubung';
+    }
+    if (kodePrintBtn) kodePrintBtn.disabled = false;
+    
     if (status) status.textContent = `Terhubung: ${bluetoothDevice.name || 'Unknown'}`;
     
     showIndicator('success', 'Printer terhubung!');
@@ -758,25 +769,21 @@ function renderKodeActionButtons() {
 function generateKodeKhusus() {
   if (!kodeSelectedStudent) return;
 
-  // Generate two random 5-digit codes
-  kodeGeneratedCodes = [
-    Math.floor(10000 + Math.random() * 90000).toString(),
-    Math.floor(10000 + Math.random() * 90000).toString()
-  ];
-
-  const codesContainer = document.getElementById('kodeGeneratedCodes');
-  if (codesContainer) {
-    codesContainer.innerHTML = `
-      <div class="kode-generated-codes">
-        <div class="code-box">
-          <div class="code-label">Kode 1</div>
-          <div class="code-value">${kodeGeneratedCodes[0]}</div>
-        </div>
-        <div class="code-box">
-          <div class="code-label">Kode 2</div>
-          <div class="code-value">${kodeGeneratedCodes[1]}</div>
-        </div>
-      </div>`;
+  const existingCodes = new Set(kodeKhususList.map(k => k.kode));
+  kodeGeneratedCodes = [];
+  let attempts = 0;
+  
+  while (kodeGeneratedCodes.length < 2 && attempts < 100) {
+    const code = Math.floor(10000 + Math.random() * 90000).toString();
+    if (!existingCodes.has(code) && !kodeGeneratedCodes.includes(code)) {
+      kodeGeneratedCodes.push(code);
+    }
+    attempts++;
+  }
+  
+  if (kodeGeneratedCodes.length < 2) {
+    showIndicator('error', 'Gagal generate kode unik, coba lagi');
+    return;
   }
 
   renderKodeActionButtons();
