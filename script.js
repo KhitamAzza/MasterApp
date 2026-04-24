@@ -787,25 +787,26 @@ async function printKodeThermal() {
   try {
     if (printBtn) printBtn.disabled = true;
 
-    // Save to sheet first
-    const res = await fetch(`${GAS_URL}?action=saveKodeKhusus`, {
+    // Save to sheet first — FIX: action goes in body, not URL
+    const res = await fetch(GAS_URL, {
       method: 'POST',
       body: JSON.stringify({
+        action: 'saveKodeKhusus',  // ← action goes here
         idSiswa: kodeSelectedStudent.id,
         nama: kodeSelectedStudent.nama,
         kelas: kodeSelectedStudent.kelas || '',
         kodes: kodeGeneratedCodes
       })
     });
+    
     const result = await res.json();
     if (result.status !== 'ok') throw new Error(result.message || 'Gagal menyimpan');
 
-    // Print via Bluetooth (reuse existing thermal printer logic)
+    // Print via Bluetooth
     await sendKodeToPrinter();
 
     showIndicator('success', 'Kode tersimpan & dicetak!');
     
-    // Reset and reload
     setTimeout(() => {
       kodeSelectedStudent = null;
       kodeGeneratedCodes = [];
@@ -818,7 +819,6 @@ async function printKodeThermal() {
     if (printBtn) printBtn.disabled = false;
   }
 }
-
 async function sendKodeToPrinter() {
   if (!bluetoothCharacteristic) {
     throw new Error('Printer belum terhubung');
