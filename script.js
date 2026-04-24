@@ -34,14 +34,6 @@ const APP_CONFIG = {
   statistik:   { title: 'Statistik',    color: '#c084fc' }
 };
 
-// ─── ESC/POS Helpers ──────────────────────────────────────────────────────────
-class EscPosEncoder {
-  encodeText(text) {
-    const encoder = new TextEncoder();
-    return Array.from(encoder.encode(text));
-  }
-}
-
 // ─── Init ───────────────────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -419,12 +411,12 @@ async function connectBluetooth() {
     }
     if (printBtn) printBtn.disabled = false;
     
-    // Kode Khusus buttons
+    // Kode Khusus buttons ← ADD THIS BLOCK
     const kodeConnectBtn = document.getElementById('kodeConnectBtn');
     const kodePrintBtn = document.getElementById('kodePrintBtn');
     if (kodeConnectBtn) {
       kodeConnectBtn.classList.add('connected');
-      kodeConnectBtn.querySelector('span').textContent = 'Printer Terhubung';
+      kodePrintBtn.querySelector('span').textContent = 'Printer Terhubung';
     }
     if (kodePrintBtn) kodePrintBtn.disabled = false;
     
@@ -439,55 +431,7 @@ async function connectBluetooth() {
   }
 }
 
-// ─── Bitmap QR Helpers ────────────────────────────────────────────────────────
-
-async function renderQrToBitmap(text, moduleSize = 7) {
-  return new Promise((resolve, reject) => {
-    const canvas = document.createElement('canvas');
-    QRCode.toCanvas(canvas, text, {
-      errorCorrectionLevel: 'M',
-      margin: 3,
-      scale: moduleSize,
-      color: { dark: '#000000', light: '#ffffff' }
-    }, (err) => {
-      if (err) return reject(err);
-      const ctx = canvas.getContext('2d');
-      const w = canvas.width;
-      const h = canvas.height;
-      const imageData = ctx.getImageData(0, 0, w, h).data;
-      const byteWidth = Math.ceil(w / 8);
-      const bitmap = [];
-      for (let y = 0; y < h; y++) {
-        for (let bx = 0; bx < byteWidth; bx++) {
-          let byte = 0;
-          for (let bit = 0; bit < 8; bit++) {
-            const x = bx * 8 + bit;
-            if (x < w) {
-              const idx = (y * w + x) * 4;
-              if (imageData[idx] < 128) byte |= (0x80 >> bit);
-            }
-          }
-          bitmap.push(byte);
-        }
-      }
-      resolve({ bitmap, width: byteWidth, height: h });
-    });
-  });
-}
-
-async function buildQrBitmapCommands(text) {
-  const { bitmap, width, height } = await renderQrToBitmap(text, 7);
-  const commands = [];
-  const xL = width & 0xFF;
-  const xH = (width >> 8) & 0xFF;
-  const yL = height & 0xFF;
-  const yH = (height >> 8) & 0xFF;
-  commands.push(0x1D, 0x76, 0x30, 0x00, xL, xH, yL, yH);
-  commands.push(...bitmap);
-  return commands;
-}
-
-// ─── printQrThermal ───────────────────────────────────────────────────────────
+// ─── ESC/POS Print QR (Native QR Command) ───────────────────────────────────
 
 async function printQrThermal() {
   if (!selectedStudent) {
@@ -502,51 +446,71 @@ async function printQrThermal() {
     showIndicator('error', 'Hubungkan printer dulu');
     return;
   }
-
+  
   const status = document.getElementById('qrStatus');
   const printBtn = document.getElementById('qrPrintBtn');
-
+  
   try {
     if (printBtn) printBtn.disabled = true;
-    if (status) status.textContent = 'Menyiapkan QR...';
-
+    if (status) status.textContent = 'Mencetak...';
+    
     const encoder = new EscPosEncoder();
     const safeId = String(selectedStudent.id).trim();
+    
     let commands = [];
-
+    
     // Init printer
     commands.push(0x1B, 0x40);
-
+    
     // Center align
     commands.push(0x1B, 0x61, 0x01);
-
-    // Name — bold + double height + double width
+    
+    // Bold + double height + double width for name
     commands.push(0x1B, 0x21, 0x30);
     commands.push(...encoder.encodeText(selectedStudent.nama || 'Siswa'));
     commands.push(0x0A);
-
-    // Class — normal
+    
+    // Normal for class
     commands.push(0x1B, 0x21, 0x00);
     commands.push(...encoder.encodeText(selectedStudent.kelas || '-'));
     commands.push(0x0A, 0x0A);
+    
+   // ─── Native QR Code (FIXED ORDER + SIZE) ───────────────────────────────────
 
-    // ─── Bitmap QR ────────────────────────────────────────────────────────────
-    if (status) status.textContent = 'Merender QR...';
-    const qrCommands = await buildQrBitmapCommands(safeId);
-    commands.push(...qrCommands);
-    commands.push(0x0A, 0x0A);
+// Encode data
+const qrData = encoder.encodeText(safeId);
+const qrLen = qrData.length + 3;
+const pL = qrLen & 0xFF;
+const pH = (qrLen >> 8) & 0xFF;
 
-    // ID below QR — slightly bold
+// 1. Select model (use model 2 = better)
+commands.push(0x1D, 0x28, 0x6B, 0x04, 0x00, 0x31, 0x41, 0x32, 0x00);
+
+// 2. Set size (🔥 IMPORTANT: valid range 1–16)
+commands.push(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x43, 0x06); // ← use 6
+
+// 3. Set error correction (M = balanced, better for small printers)
+commands.push(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x45, 0x31); // 0x31 = M
+
+// 4. Store QR data
+commands.push(0x1D, 0x28, 0x6B, pL, pH, 0x31, 0x50, 0x30);
+commands.push(...qrData);
+
+// 5. Print QR
+commands.push(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x51, 0x30);
+
+commands.push(0x0A, 0x0A);
+    
+    // ID below QR
     commands.push(0x1B, 0x21, 0x10);
     commands.push(...encoder.encodeText(safeId));
     commands.push(0x0A, 0x0A);
-
+    
     // Feed and cut
     commands.push(0x1B, 0x64, 0x03);
     commands.push(0x1D, 0x56, 0x00);
-
-    // ─── Send in chunks ───────────────────────────────────────────────────────
-    if (status) status.textContent = 'Mencetak...';
+    
+    // ─── Send in tiny chunks ────────────────────────────────────────────────
     const chunkSize = 64;
     for (let i = 0; i < commands.length; i += chunkSize) {
       const chunk = new Uint8Array(commands.slice(i, i + chunkSize));
@@ -557,16 +521,24 @@ async function printQrThermal() {
       }
       await new Promise(r => setTimeout(r, 50));
     }
-
+    
     if (status) status.textContent = 'Selesai mencetak!';
     showIndicator('success', 'QR berhasil dicetak!');
-
+    
   } catch (err) {
     console.error('Print error:', err);
     if (status) status.textContent = 'Gagal mencetak: ' + err.message;
     showIndicator('error', 'Gagal mencetak');
   } finally {
     if (printBtn) printBtn.disabled = false;
+  }
+}
+// ─── ESC/POS Helpers ──────────────────────────────────────────────────────────
+
+class EscPosEncoder {
+  encodeText(text) {
+    const encoder = new TextEncoder();
+    return Array.from(encoder.encode(text));
   }
 }
 
@@ -768,7 +740,7 @@ function renderKodeActionButtons() {
   const container = document.getElementById('kodeActionButtons');
   if (!container) return;
 
-  if (kodeGeneratedCodes.length === 2) {
+    if (kodeGeneratedCodes.length === 2) {
     const isConnected = bluetoothCharacteristic !== null;
     container.innerHTML = `
       <button class="qr-connect-btn ${isConnected ? 'connected' : ''}" id="kodeConnectBtn" onclick="connectBluetooth()" style="margin-bottom:12px;width:100%;justify-content:center;">
@@ -822,7 +794,7 @@ async function printKodeThermal() {
     showIndicator('error', 'Generate kode terlebih dahulu');
     return;
   }
-  if (!bluetoothCharacteristic) {
+if (!bluetoothCharacteristic) {   // ← ADD THIS BLOCK
     showIndicator('error', 'Hubungkan printer dulu');
     return;
   }
@@ -831,11 +803,11 @@ async function printKodeThermal() {
   try {
     if (printBtn) printBtn.disabled = true;
 
-    // Save to sheet first
+    // Save to sheet first — FIX: action goes in body, not URL
     const res = await fetch(GAS_URL, {
       method: 'POST',
       body: JSON.stringify({
-        action: 'saveKodeKhusus',
+        action: 'saveKodeKhusus',  // ← action goes here
         idSiswa: kodeSelectedStudent.id,
         nama: kodeSelectedStudent.nama,
         kelas: kodeSelectedStudent.kelas || '',
@@ -863,8 +835,11 @@ async function printKodeThermal() {
     if (printBtn) printBtn.disabled = false;
   }
 }
-
 async function sendKodeToPrinter() {
+  //if (!bluetoothCharacteristic) {
+    //throw new Error('Printer belum terhubung');
+  //}
+
   const encoder = new EscPosEncoder();
   let commands = [];
 
@@ -920,3 +895,5 @@ function showIndicator(type, message) {
   indicator.className = `save-indicator ${type} show`;
   setTimeout(() => indicator.classList.remove('show'), 2000);
 }
+
+Take a look at my code analyze it
