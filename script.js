@@ -12,6 +12,11 @@ let bluetoothDevice = null;
 let bluetoothServer = null;
 let bluetoothCharacteristic = null;
 
+//Kode khusus state
+let kodeKhususList = [];
+let kodeSelectedStudent = null;
+let kodeGeneratedCodes = [];
+
 const STATUS_OPTIONS = [
   { value: '',          label: 'Kosong',    class: '' },
   { value: 'HADIR',     label: 'HADIR',     class: 'status-hadir' },
@@ -25,6 +30,7 @@ const STATUS_OPTIONS = [
 const APP_CONFIG = {
   masterAdmin: { title: 'Master Admin', color: '#00d4ff' },
   qrPrinter:   { title: 'Cetak QR',     color: '#ff6b35' },
+  kodeKhusus:  { title: 'Kode Khusus',  color: '#f59e0b' },
   statistik:   { title: 'Statistik',    color: '#c084fc' }
 };
 
@@ -96,6 +102,7 @@ function handlePopState(e) {
 function loadAppContent(appId, container) {
   if (appId === 'masterAdmin') loadMasterAdmin(container);
   else if (appId === 'qrPrinter') loadQrPrinter(container);
+  else if (appId === 'kodeKhusus') loadKodeKhusus(container);
   else if (appId === 'statistik') loadStatistik(container);
 }
 
@@ -540,6 +547,329 @@ function loadStatistik(container) {
     </div>`;
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// KODE KHUSUS
+// ══════════════════════════════════════════════════════════════════════════════
+
+function loadKodeKhusus(container) {
+  container.innerHTML = `
+    <div class="container">
+      <h1 style="background: linear-gradient(90deg, #f59e0b, #d97706); -webkit-background-clip: text;">KODE KHUSUS</h1>
+      <div class="loading" id="kodeLoading">Memuat data...</div>
+      <div id="kodeContainer"></div>
+    </div>`;
+  loadKodeKhususData();
+}
+
+async function loadKodeKhususData() {
+  try {
+    const res = await fetch(`${GAS_URL}?action=getKodeKhusus`);
+    const result = await res.json();
+    if (Array.isArray(result)) {
+      kodeKhususList = result;
+    } else if (result && result.codes) {
+      kodeKhususList = result.codes;
+    } else {
+      kodeKhususList = [];
+    }
+    const ld = document.getElementById('kodeLoading');
+    if (ld) ld.style.display = 'none';
+    renderKodeKhususList();
+  } catch (err) {
+    const ld = document.getElementById('kodeLoading');
+    if (ld) ld.textContent = 'Error: ' + err.message;
+    console.error(err);
+  }
+}
+
+function renderKodeKhususList() {
+  const container = document.getElementById('kodeContainer');
+  if (!container) return;
+
+  const unused = kodeKhususList.filter(k => !k.status || k.status === '');
+  const used = kodeKhususList.filter(k => k.status === 'used');
+
+  let html = '';
+
+  // Unused codes
+  if (unused.length > 0) {
+    html += `
+      <div class="kode-section">
+        <div class="kode-section-title">Kode Belum Digunakan (${unused.length})</div>
+        <div class="kode-list">
+          ${unused.map(k => kodeItemHTML(k, false)).join('')}
+        </div>
+      </div>`;
+  }
+
+  // Used codes
+  if (used.length > 0) {
+    html += `
+      <div class="kode-section">
+        <div class="kode-section-title">Kode Sudah Digunakan (${used.length})</div>
+        <div class="kode-list">
+          ${used.slice(0, 10).map(k => kodeItemHTML(k, true)).join('')}
+        </div>
+        ${used.length > 10 ? `<div style="text-align:center;color:#555;font-size:12px;padding:12px;">...dan ${used.length - 10} lainnya</div>` : ''}
+      </div>`;
+  }
+
+  // Empty state
+  if (kodeKhususList.length === 0) {
+    html += `<div style="text-align:center;padding:40px;color:#555;">Belum ada kode khusus</div>`;
+  }
+
+  // Add button
+  html += `
+    <button class="kode-add-btn" onclick="showKodeGenerateForm()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="12" y1="5" x2="12" y2="19"/>
+        <line x1="5" y1="12" x2="19" y2="12"/>
+      </svg>
+      <span>Tambah Kode Khusus</span>
+    </button>`;
+
+  container.innerHTML = html;
+}
+
+function kodeItemHTML(kode, isUsed) {
+  return `
+    <div class="kode-item">
+      <div class="kode-item-info">
+        <div class="kode-item-name">${kode.nama || '-'}</div>
+        <div class="kode-item-meta">${kode.kelas || '-'} · ID: ${kode.idSiswa || '-'}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div class="kode-item-code">${kode.kode || '-----'}</div>
+        <span class="kode-item-status ${isUsed ? 'kode-status-used' : 'kode-status-unused'}">${isUsed ? 'Used' : 'Unused'}</span>
+      </div>
+    </div>`;
+}
+
+function showKodeGenerateForm() {
+  const container = document.getElementById('kodeContainer');
+  if (!container) return;
+
+  kodeSelectedStudent = null;
+  kodeGeneratedCodes = [];
+
+  container.innerHTML = `
+    <div class="kode-generate-form">
+      <h3>Buat Kode Khusus Baru</h3>
+      <div class="kode-search-wrap">
+        <div class="search-box">
+          <input type="text" id="kodeSearchInput" placeholder="Cari nama siswa..." autocomplete="off">
+        </div>
+        <div class="qr-autocomplete" id="kodeAutocomplete"></div>
+      </div>
+      <div id="kodeSelectedStudent"></div>
+      <div id="kodeGeneratedCodes"></div>
+      <div id="kodeActionButtons"></div>
+      <button class="kode-cancel-btn" onclick="renderKodeKhususList()">Batal</button>
+    </div>`;
+
+  // Load sumber students if not already loaded
+  if (sumberStudents.length === 0) {
+    loadSumberData().then(() => setupKodeSearch());
+  } else {
+    setupKodeSearch();
+  }
+}
+
+function setupKodeSearch() {
+  const input = document.getElementById('kodeSearchInput');
+  const auto = document.getElementById('kodeAutocomplete');
+  if (!input || !auto) return;
+
+  input.addEventListener('input', (e) => {
+    const query = e.target.value.trim().toLowerCase();
+    auto.innerHTML = '';
+    if (!query) { auto.classList.remove('show'); return; }
+
+    const matches = sumberStudents.filter(s => s.nama && s.nama.toLowerCase().includes(query)).slice(0, 8);
+    if (matches.length === 0) { auto.classList.remove('show'); return; }
+
+    matches.forEach(s => {
+      const item = document.createElement('div');
+      item.className = 'qr-autocomplete-item';
+      item.innerHTML = `<div class="name">${s.nama || 'Tanpa Nama'}</div><div class="meta">${s.kelas || '-'} · ID: ${s.id || 'KOSONG'}</div>`;
+      item.addEventListener('click', () => selectKodeStudent(s));
+      auto.appendChild(item);
+    });
+    auto.classList.add('show');
+  });
+}
+
+function selectKodeStudent(student) {
+  if (!student || !student.id) {
+    showIndicator('error', 'Data siswa tidak lengkap');
+    return;
+  }
+  kodeSelectedStudent = student;
+
+  const auto = document.getElementById('kodeAutocomplete');
+  const input = document.getElementById('kodeSearchInput');
+  if (auto) auto.classList.remove('show');
+  if (input) input.value = student.nama || '';
+
+  const container = document.getElementById('kodeSelectedStudent');
+  if (container) {
+    container.innerHTML = `
+      <div class="kode-selected-student">
+        <div class="label">Siswa Terpilih</div>
+        <div class="name">${student.nama}</div>
+        <div class="meta">${student.kelas || '-'} · ID: ${student.id}</div>
+      </div>`;
+  }
+
+  renderKodeActionButtons();
+}
+
+function renderKodeActionButtons() {
+  const container = document.getElementById('kodeActionButtons');
+  if (!container) return;
+
+  if (kodeGeneratedCodes.length === 2) {
+    // Show print buttons
+    container.innerHTML = `
+      <button class="kode-print-btn" id="kodePrintBtn" onclick="printKodeThermal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="6 9 6 2 18 2 18 9"/>
+          <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+          <rect x="6" y="14" width="12" height="8"/>
+        </svg>
+        <span>Cetak Kode</span>
+      </button>`;
+  } else {
+    // Show generate button
+    container.innerHTML = `
+      <button class="kode-generate-btn" id="kodeGenerateBtn" onclick="generateKodeKhusus()" ${!kodeSelectedStudent ? 'disabled' : ''}>
+        Generate 2 Kode
+      </button>`;
+  }
+}
+
+function generateKodeKhusus() {
+  if (!kodeSelectedStudent) return;
+
+  // Generate two random 5-digit codes
+  kodeGeneratedCodes = [
+    Math.floor(10000 + Math.random() * 90000).toString(),
+    Math.floor(10000 + Math.random() * 90000).toString()
+  ];
+
+  const codesContainer = document.getElementById('kodeGeneratedCodes');
+  if (codesContainer) {
+    codesContainer.innerHTML = `
+      <div class="kode-generated-codes">
+        <div class="code-box">
+          <div class="code-label">Kode 1</div>
+          <div class="code-value">${kodeGeneratedCodes[0]}</div>
+        </div>
+        <div class="code-box">
+          <div class="code-label">Kode 2</div>
+          <div class="code-value">${kodeGeneratedCodes[1]}</div>
+        </div>
+      </div>`;
+  }
+
+  renderKodeActionButtons();
+}
+
+async function printKodeThermal() {
+  if (!kodeSelectedStudent || kodeGeneratedCodes.length !== 2) {
+    showIndicator('error', 'Generate kode terlebih dahulu');
+    return;
+  }
+
+  const printBtn = document.getElementById('kodePrintBtn');
+  
+  try {
+    if (printBtn) printBtn.disabled = true;
+
+    // Save to sheet first
+    const res = await fetch(`${GAS_URL}?action=saveKodeKhusus`, {
+      method: 'POST',
+      body: JSON.stringify({
+        idSiswa: kodeSelectedStudent.id,
+        nama: kodeSelectedStudent.nama,
+        kelas: kodeSelectedStudent.kelas || '',
+        kodes: kodeGeneratedCodes
+      })
+    });
+    const result = await res.json();
+    if (result.status !== 'ok') throw new Error(result.message || 'Gagal menyimpan');
+
+    // Print via Bluetooth (reuse existing thermal printer logic)
+    await sendKodeToPrinter();
+
+    showIndicator('success', 'Kode tersimpan & dicetak!');
+    
+    // Reset and reload
+    setTimeout(() => {
+      kodeSelectedStudent = null;
+      kodeGeneratedCodes = [];
+      loadKodeKhususData();
+    }, 1500);
+
+  } catch (err) {
+    console.error('Kode print error:', err);
+    showIndicator('error', err.message || 'Gagal mencetak');
+    if (printBtn) printBtn.disabled = false;
+  }
+}
+
+async function sendKodeToPrinter() {
+  if (!bluetoothCharacteristic) {
+    throw new Error('Printer belum terhubung');
+  }
+
+  const encoder = new EscPosEncoder();
+  let commands = [];
+
+  // Init
+  commands.push(0x1B, 0x40);
+  // Center align
+  commands.push(0x1B, 0x61, 0x01);
+  // Bold + big title
+  commands.push(0x1B, 0x21, 0x30);
+  commands.push(...encoder.encodeText('KODE KHUSUS'));
+  commands.push(0x0A, 0x0A);
+  // Normal
+  commands.push(0x1B, 0x21, 0x00);
+  commands.push(...encoder.encodeText(kodeSelectedStudent.nama || 'Siswa'));
+  commands.push(0x0A);
+  commands.push(...encoder.encodeText(kodeSelectedStudent.kelas || '-'));
+  commands.push(0x0A, 0x0A);
+
+  // Codes
+  kodeGeneratedCodes.forEach((code, idx) => {
+    commands.push(0x1B, 0x21, 0x20);
+    commands.push(...encoder.encodeText(`KODE ${idx + 1}`));
+    commands.push(0x0A);
+    commands.push(0x1B, 0x21, 0x30);
+    commands.push(...encoder.encodeText(code));
+    commands.push(0x0A, 0x0A);
+  });
+
+  // Reset + cut
+  commands.push(0x1B, 0x21, 0x00);
+  commands.push(0x1B, 0x64, 0x03);
+  commands.push(0x1D, 0x56, 0x00);
+
+  // Send chunks
+  const chunkSize = 64;
+  for (let i = 0; i < commands.length; i += chunkSize) {
+    const chunk = new Uint8Array(commands.slice(i, i + chunkSize));
+    if (bluetoothCharacteristic.properties.writeWithoutResponse) {
+      await bluetoothCharacteristic.writeValueWithoutResponse(chunk);
+    } else {
+      await bluetoothCharacteristic.writeValueWithResponse(chunk);
+    }
+    await new Promise(r => setTimeout(r, 50));
+  }
+}
+
 // ─── Toast Indicator ────────────────────────────────────────────────────────
 
 function showIndicator(type, message) {
@@ -549,3 +879,4 @@ function showIndicator(type, message) {
   indicator.className = `save-indicator ${type} show`;
   setTimeout(() => indicator.classList.remove('show'), 2000);
 }
+
