@@ -896,4 +896,3 @@ function showIndicator(type, message) {
   setTimeout(() => indicator.classList.remove('show'), 2000);
 }
 
-Take a look at my code analyze it
