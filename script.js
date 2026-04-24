@@ -729,10 +729,16 @@ function renderKodeActionButtons() {
   const container = document.getElementById('kodeActionButtons');
   if (!container) return;
 
-  if (kodeGeneratedCodes.length === 2) {
-    // Show print buttons
+    if (kodeGeneratedCodes.length === 2) {
+    const isConnected = bluetoothCharacteristic !== null;
     container.innerHTML = `
-      <button class="kode-print-btn" id="kodePrintBtn" onclick="printKodeThermal()">
+      <button class="qr-connect-btn ${isConnected ? 'connected' : ''}" id="kodeConnectBtn" onclick="connectBluetooth()" style="margin-bottom:12px;width:100%;justify-content:center;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+          <path d="M6.5 6.5l11 11L12 23V1l5.5 5.5-11 11"/>
+        </svg>
+        <span>${isConnected ? 'Printer Terhubung' : 'Hubungkan Printer'}</span>
+      </button>
+      <button class="kode-print-btn" id="kodePrintBtn" onclick="printKodeThermal()" ${!isConnected ? 'disabled' : ''}>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <polyline points="6 9 6 2 18 2 18 9"/>
           <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
@@ -781,7 +787,10 @@ async function printKodeThermal() {
     showIndicator('error', 'Generate kode terlebih dahulu');
     return;
   }
-
+if (!bluetoothCharacteristic) {   // ← ADD THIS BLOCK
+    showIndicator('error', 'Hubungkan printer dulu');
+    return;
+  }
   const printBtn = document.getElementById('kodePrintBtn');
   
   try {
@@ -820,9 +829,9 @@ async function printKodeThermal() {
   }
 }
 async function sendKodeToPrinter() {
-  if (!bluetoothCharacteristic) {
-    throw new Error('Printer belum terhubung');
-  }
+  //if (!bluetoothCharacteristic) {
+    //throw new Error('Printer belum terhubung');
+  //}
 
   const encoder = new EscPosEncoder();
   let commands = [];
