@@ -130,6 +130,12 @@ html, body {
   border: 1px solid #ff6b3533;
 }
 
+.kode-icon {
+  background: linear-gradient(135deg, #f59e0b22, #f59e0b44);
+  color: #f59e0b;
+  border: 1px solid #f59e0b33;
+}
+
 .stats-icon {
   background: linear-gradient(135deg, #7b2cbf22, #7b2cbf44);
   color: #c084fc;
@@ -640,6 +646,270 @@ h1 {
   font-size: 12px;
   color: #666;
   margin-top: 12px;
+}
+
+/* ─── Kode Khusus Styles ─────────────────────────────────────────────────── */
+.kode-section {
+  margin-bottom: 24px;
+}
+
+.kode-section-title {
+  font-size: 14px;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
+}
+
+.kode-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.kode-item {
+  background: #1a1a1a;
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid #333;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: all 0.2s;
+}
+
+.kode-item:hover {
+  border-color: #f59e0b;
+  background: #1f1f1e;
+}
+
+.kode-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.kode-item-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.kode-item-meta {
+  font-size: 12px;
+  color: #888;
+}
+
+.kode-item-code {
+  font-family: monospace;
+  font-size: 18px;
+  font-weight: 700;
+  color: #f59e0b;
+  letter-spacing: 2px;
+  background: #0f0f0f;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid #f59e0b33;
+}
+
+.kode-item-status {
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.kode-status-unused {
+  background: #1a4d2e;
+  color: #4ade80;
+}
+
+.kode-status-used {
+  background: #7f1d1d;
+  color: #f87171;
+}
+
+.kode-add-btn {
+  width: 100%;
+  padding: 16px;
+  border-radius: 12px;
+  border: 2px dashed #333;
+  background: transparent;
+  color: #888;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s;
+  margin-top: 8px;
+}
+
+.kode-add-btn:hover, .kode-add-btn:active {
+  border-color: #f59e0b;
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.05);
+}
+
+.kode-add-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* Kode Generate Form */
+.kode-generate-form {
+  background: #1a1a1a;
+  border-radius: 16px;
+  padding: 24px;
+  border: 1px solid #333;
+  margin-top: 16px;
+}
+
+.kode-generate-form h3 {
+  font-size: 18px;
+  margin-bottom: 20px;
+  color: #fff;
+}
+
+.kode-search-wrap {
+  position: relative;
+  margin-bottom: 20px;
+}
+
+.kode-selected-student {
+  background: #0f0f0f;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 20px;
+  border: 1px solid #333;
+}
+
+.kode-selected-student .label {
+  font-size: 11px;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.kode-selected-student .name {
+  font-size: 20px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.kode-selected-student .meta {
+  font-size: 13px;
+  color: #888;
+  margin-top: 2px;
+}
+
+.kode-generated-codes {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.kode-generated-codes .code-box {
+  flex: 1;
+  background: #0f0f0f;
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+  border: 1px solid #f59e0b33;
+}
+
+.kode-generated-codes .code-label {
+  font-size: 11px;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.kode-generated-codes .code-value {
+  font-family: monospace;
+  font-size: 28px;
+  font-weight: 700;
+  color: #f59e0b;
+  letter-spacing: 4px;
+}
+
+.kode-generate-btn {
+  width: 100%;
+  padding: 16px;
+  border-radius: 12px;
+  border: none;
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 12px;
+}
+
+.kode-generate-btn:hover, .kode-generate-btn:active {
+  transform: scale(1.01);
+  box-shadow: 0 4px 20px rgba(245, 158, 11, 0.3);
+}
+
+.kode-generate-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.kode-print-btn {
+  width: 100%;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid #f59e0b;
+  background: transparent;
+  color: #f59e0b;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+
+.kode-print-btn:hover, .kode-print-btn:active {
+  background: rgba(245, 158, 11, 0.1);
+}
+
+.kode-print-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.kode-print-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+.kode-cancel-btn {
+  width: 100%;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid #333;
+  background: transparent;
+  color: #666;
+  font-size: 14px;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: all 0.2s;
+}
+
+.kode-cancel-btn:hover {
+  color: #fff;
+  border-color: #555;
 }
 
 /* Placeholders */
